@@ -65,6 +65,11 @@ class Home(tk.Frame):
         self.Frames1= 0
         #self.Frames2= 0
 
+        #Todo lo relativo a los metadatos
+
+        self.MetadatosGLobalesCamara1= None
+        self.MetadatosGLobalesCamara2= None
+
         #Los valores de las horas, minutos y segundos y sus intervalos
 
         self.t_horas= tk.StringVar(self, value='')
@@ -78,7 +83,7 @@ class Home(tk.Frame):
 
         self.init_widgets()
 
-    def start(self): #Al pulsar START, guarda los  tiempos e inicia la grbacion
+    def start(self): #Al pulsar START, guarda los  tiempos e inicia la grabacion
         horas= self.t_horas.get()
         minutos= self.t_minutos.get()
         segundos= self.t_segundos.get()
@@ -106,25 +111,93 @@ class Home(tk.Frame):
             self.cam1.activar()
             #self.cam2.activar()
 
-            MetadatosGLobalesCamara1= MetadatosGlobalesIniciales(self.cam1.filename, self.cam1)
-            #MetadatosGLobalesCamara2= MetadatosGlobalesIniciales(self.cam2.filename, self.cam2)
+            self.MetadatosGLobalesCamara1= MetadatosGlobalesIniciales(self.cam1.filename, self.cam1)
+            #self.MetadatosGLobalesCamara2= MetadatosGlobalesIniciales(self.cam2.filename, self.cam2)
 
-            self.cam1.cerrar()
+            #self.cam1.cerrar()
             self.start_time = time.time()
-            #self.bucle(tiempo, intervalo)
+            #self.bucle(self.start_time, tiempo, intervalo)
+            self.visualizar(self.cam1, self.videolbl1)
         else:
             print('Faltan Parámetros por rellenar')
 
+    def stop(self):
+        self.t_horas= tk.StringVar(self, value='')
+        self.t_minutos= tk.StringVar(self, value='')
+        self.t_segundos= tk.StringVar(self, value= '')
+
+        self.intervalo_minutos= tk.StringVar(self, value= '' )
+        self.intervalo_segundos= tk.StringVar(self, value= '')
+        self.cam1.cerrar()
+
     def bucle_intervalo(self, start_cycle, intervalo):
-        self.after(0, self.bucle_intervalo)
-        self.after(0, self.bucle)
+        if time.time()-start_cycle < intervalo:
+            self.after(1,self.bucle_intervalo)
+        else:
+            pass
     
-    def bucle(self, tiempo, intervalo):
-        self.after(0, self.bucle)
+    def bucle(self, start_time, tiempo, intervalo):
 
-    #def visualizar():
+        if time.time()- start_time<tiempo:
+            self.cam1.crear_salida()
+            #self.cam2.crear_salida()
 
+            t1 = CamThread(self.cam1,start_time)
+            #t2 = CamThread(self.cam2,start_time)
 
+            t1.start()
+            #t2.start()
+
+            start_ciclo = time.time()
+            self.bucle_intervalo(start_ciclo, intervalo)
+
+            MetadatosFinalesCamara1= MetadatosGlobalesFinales(t1)
+            #MetadatosFinalesCamara2= MetadatosGlobalesFinales(t2)
+
+            Promedio_fps1+= MetadatosFinalesCamara1[0]
+            #Promedio_fps2+=MetadatosFinalesCamara2[0]
+
+            Frames1+= MetadatosFinalesCamara1[1]
+            #Frames2+= MetadatosFinalesCamara2[1]
+
+            t1.stop()
+            #t2.stop()
+            t1.join()
+            #t2.join()
+
+            self.cam1.cerrar_salida()
+            #self.cam2.cerrar_salida()
+            cv2.destroyAllWindows()
+        
+            self.after(1, self.bucle)
+        else:
+            self.cam1.cerrar()
+            #self.cam2.cerrar()
+
+            Promedio_fps1= Promedio_fps1/Frames1
+            #Promedio_fps2= Promedio_fps2/Frames2
+
+            Resumen1= Resumen_final(MetadatosGLobalesCamara1 ,Promedio_fps1,Frames1)
+            #Resumen2= Resumen_final(MetadatosGLobalesCamara2 ,Promedio_fps2,Frames2)
+            print("Programa finalizado")
+
+    def visualizar(self,cam, lblVideo):
+
+        if cam is not None:
+            ret, frame = cam.cap.read()
+            if ret == True:
+                frame = imutils.resize(frame, width= cam.shape[1])
+                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                im = Image.fromarray(frame)
+                img = ImageTk.PhotoImage(image=im)
+                lblVideo.configure(image=img)
+                lblVideo.image = img
+                lblVideo.after(34, self.visualizar, cam,lblVideo)
+        else:
+            lblVideo.image = ""
+            cam.cap.release()
+    
+    #def grabar(self):
 
     def init_widgets(self): #Aqui iran todos los botones y demas
 
@@ -132,7 +205,7 @@ class Home(tk.Frame):
         Voy a crear un Frame para las etiquetas de tiempo y de intervalos de tiempo
         """
 
-        posicion = {'horas':[0,0], 'minutos':[0,2], 'segundos':[0,4], 'grabar':[0, 6], 'intervalo_min':[1, 0], 'intervalo_s':[1,2]}
+        posicion = {'horas':[0,0], 'minutos':[0,2], 'segundos':[0,4], 'intervalo_min':[1, 0], 'intervalo_s':[1,2],'grabar':[0, 6], 'parar': [1,6]}
 
         etiquetasFrame= tk.Frame(self)
         etiquetasFrame.configure(background= style.COMPONENT)
@@ -228,6 +301,13 @@ class Home(tk.Frame):
                                 activeforeground= style.TEXT,
                                 **style.STYLE
                                 ).grid(row=posicion['grabar'][0], column=posicion['grabar'][1])
+        boton_finalizado= tk.Button(etiquetasFrame, 
+                                text= 'STOP',
+                                command= self.stop, 
+                                activebackground= style.BACKGROUND ,
+                                activeforeground= style.TEXT,
+                                **style.STYLE
+                                ).grid(row=posicion['parar'][0], column=posicion['parar'][1])
         
         # Hacemos un Frame superior para los videos
         videoFrame= tk.Frame(self)
@@ -238,7 +318,15 @@ class Home(tk.Frame):
             expand= True,
         )
 
+        '''
+        Para los videos vamos a necesitar una Label que es lo que rellenaremos con las
+        sucesivas imagenes
+        '''
 
+        self.videolbl1= tk.Label(videoFrame, **style.STYLE)
+        self.videolbl1.grid(column= 0, row= 0, columnspan= 2)
+        self.videolbl2= tk.Label(videoFrame, **style.STYLE)
+        self.videolbl2.grid(column= 1, row= 0, columnspan= 2)
 
 class Monitor(tk.Frame):
 
