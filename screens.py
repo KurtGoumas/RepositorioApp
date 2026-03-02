@@ -116,8 +116,8 @@ class Home(tk.Frame):
 
             #self.cam1.cerrar()
             self.start_time = time.time()
-            #self.bucle(self.start_time, tiempo, intervalo)
-            self.visualizar(self.cam1, self.videolbl1)
+            self.bucle(self.start_time, tiempo, intervalo)
+            #self.visualizar(self.cam1, self.videolbl1)
         else:
             print('Faltan Parámetros por rellenar')
 
@@ -131,11 +131,15 @@ class Home(tk.Frame):
         self.cam1.cerrar()
 
     def bucle_intervalo(self, start_cycle, intervalo):
-        if time.time()-start_cycle < intervalo:
-            self.after(1,self.bucle_intervalo)
+        print('abriendo bucle')
+        if time.time()-start_cycle < intervalo:    
+            self.visualizar(self.cam1, self.videolbl1)
+            self.after(34,self.visualizar, self.cam1,self.videolbl1)
+            self.after(1,self.bucle_intervalo, start_cycle,intervalo)
         else:
+            print('cerrando bucle')
             pass
-    
+
     def bucle(self, start_time, tiempo, intervalo):
 
         if time.time()- start_time<tiempo:
@@ -154,11 +158,11 @@ class Home(tk.Frame):
             MetadatosFinalesCamara1= MetadatosGlobalesFinales(t1)
             #MetadatosFinalesCamara2= MetadatosGlobalesFinales(t2)
 
-            Promedio_fps1+= MetadatosFinalesCamara1[0]
-            #Promedio_fps2+=MetadatosFinalesCamara2[0]
+            self.Promedio_fps1+= MetadatosFinalesCamara1[0]
+            #self.Promedio_fps2+=MetadatosFinalesCamara2[0]
 
-            Frames1+= MetadatosFinalesCamara1[1]
-            #Frames2+= MetadatosFinalesCamara2[1]
+            self.Frames1+= MetadatosFinalesCamara1[1]
+            #self.Frames2+= MetadatosFinalesCamara2[1]
 
             t1.stop()
             #t2.stop()
@@ -169,16 +173,16 @@ class Home(tk.Frame):
             #self.cam2.cerrar_salida()
             cv2.destroyAllWindows()
         
-            self.after(1, self.bucle)
+            self.after(34, self.bucle, start_time, tiempo,intervalo)
         else:
             self.cam1.cerrar()
             #self.cam2.cerrar()
 
-            Promedio_fps1= Promedio_fps1/Frames1
-            #Promedio_fps2= Promedio_fps2/Frames2
+            self.Promedio_fps1= self.Promedio_fps1/self.Frames1
+            #self.Promedio_fps2= self.Promedio_fps2/self.Frames2
 
-            Resumen1= Resumen_final(MetadatosGLobalesCamara1 ,Promedio_fps1,Frames1)
-            #Resumen2= Resumen_final(MetadatosGLobalesCamara2 ,Promedio_fps2,Frames2)
+            Resumen1= Resumen_final(self.MetadatosGLobalesCamara1 ,self.Promedio_fps1,self.Frames1)
+            #Resumen2= Resumen_final(self.MetadatosGLobalesCamara2 ,self.Promedio_fps2,self.Frames2)
             print("Programa finalizado")
 
     def visualizar(self,cam, lblVideo):
@@ -192,7 +196,7 @@ class Home(tk.Frame):
                 img = ImageTk.PhotoImage(image=im)
                 lblVideo.configure(image=img)
                 lblVideo.image = img
-                lblVideo.after(34, self.visualizar, cam,lblVideo)
+                #lblVideo.after(34, self.visualizar, cam,lblVideo)
         else:
             lblVideo.image = ""
             cam.cap.release()
