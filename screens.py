@@ -123,7 +123,7 @@ class Home(tk.Frame):
         else:
             print('Faltan Parámetros por rellenar')
 
-    def stop(self):
+    def stop(self):#Al pulsar STOP resetea los tiempos y cierra las camaras, rompiendo el bucle
         self.t_horas= tk.StringVar(self, value='')
         self.t_minutos= tk.StringVar(self, value='')
         self.t_segundos= tk.StringVar(self, value= '')
@@ -133,7 +133,7 @@ class Home(tk.Frame):
         self.cam1.cerrar()
         #self.cam2.cerrar()
 
-    def bucle(self, start_time, tiempo, intervalo):
+    def bucle(self, start_time, tiempo, intervalo):#Este es el bucle grande donde se crean hilos y salidas
 
         if time.time()- start_time<tiempo:
             self.cam1.crear_salida()
@@ -159,7 +159,7 @@ class Home(tk.Frame):
             #Resumen2= Resumen_final(self.MetadatosGLobalesCamara2 ,self.Promedio_fps2,self.Frames2)
             print("Programa finalizado")
 
-    def salidas(self, start_time, tiempo, intervalo, t1):
+    def salidas(self, start_time, tiempo, intervalo, t1):#Aqui hay que añadirle t2 cuando metamos dos camaras
             MetadatosFinalesCamara1= MetadatosGlobalesFinales(t1)
             #MetadatosFinalesCamara2= MetadatosGlobalesFinales(t2)
 
@@ -180,7 +180,7 @@ class Home(tk.Frame):
 
             self.bucle(start_time, tiempo, intervalo)
 
-    def visualizar(self,cam, lblVideo):
+    def visualizar(self,cam, lblVideo):#Funcion para ver los videos en pantalla
 
         if cam is not None:
             ret, frame = cam.cap.read()
@@ -195,7 +195,22 @@ class Home(tk.Frame):
             else:
                 lblVideo.image = ""
                 cam.cap.release()
-    #def grabar(self):
+    
+    def Exp_up(self):
+        self.cam1.exp_up()
+        #self.cam2.exp_up()
+
+    def Exp_down(self):
+        self.cam1.exp_down()
+        #self.cam2.exp_down()
+
+    def Gain_up(self):
+        self.cam1.gain_up()
+        #self.cam2.gain_up()
+    
+    def Gain_down(self):
+        self.cam1.gain_down()
+        #self.cam2.gain_down()
 
     def init_widgets(self): #Aqui iran todos los botones y demas
 
@@ -203,7 +218,7 @@ class Home(tk.Frame):
         Voy a crear un Frame para las etiquetas de tiempo y de intervalos de tiempo
         """
 
-        posicion = {'horas':[0,0], 'minutos':[0,2], 'segundos':[0,4], 'intervalo_min':[1, 0], 'intervalo_s':[1,2],'grabar':[0, 6], 'parar': [1,6]}
+        posicion = {'horas':[0,0], 'minutos':[0,2], 'segundos':[0,4], 'intervalo_min':[1, 0], 'intervalo_s':[1,2],'grabar':[0, 6], 'parar': [1,6], 'Exp': [3,0], 'Gain': [6,0]}
 
         etiquetasFrame= tk.Frame(self)
         etiquetasFrame.configure(background= style.COMPONENT)
@@ -256,6 +271,20 @@ class Home(tk.Frame):
 
         #Textos y etiquetas no interactuables
 
+        #Textos de los botones de Exposicion y ganancia
+
+        texto_Exp= tk.Label(etiquetasFrame,
+                              text='Exposición:',
+                              **style.STYLE
+
+        ).grid(row=posicion['Exp'][0],column=posicion['Exp'][1])
+
+        texto_Gain= tk.Label(etiquetasFrame,
+                              text='Ganancia:',
+                              **style.STYLE
+
+        ).grid(row=posicion['Gain'][0],column=posicion['Gain'][1])
+
         #Primero los de tiempo
 
         texto_horas= tk.Label(etiquetasFrame,
@@ -306,6 +335,34 @@ class Home(tk.Frame):
                                 activeforeground= style.TEXT,
                                 **style.STYLE
                                 ).grid(row=posicion['parar'][0], column=posicion['parar'][1])
+        boton_Exp_up= tk.Button(etiquetasFrame, 
+                                text= '🔼',
+                                command= self.Exp_up, 
+                                activebackground= style.BACKGROUND ,
+                                activeforeground= style.TEXT,
+                                **style.STYLE
+                                ).grid(row=posicion['Exp'][0]-1, column=posicion['Exp'][1]+1)
+        boton_Exp_down= tk.Button(etiquetasFrame, 
+                                text= '🔽',
+                                command= self.Exp_down, 
+                                activebackground= style.BACKGROUND ,
+                                activeforeground= style.TEXT,
+                                **style.STYLE
+                                ).grid(row=posicion['Exp'][0]+1, column=posicion['Exp'][1]+1)
+        boton_Gain_up= tk.Button(etiquetasFrame, 
+                                text= '🔼',
+                                command= self.Gain_up, 
+                                activebackground= style.BACKGROUND ,
+                                activeforeground= style.TEXT,
+                                **style.STYLE
+                                ).grid(row=posicion['Gain'][0]-1, column=posicion['Gain'][1]+1)
+        boton_Gain_down= tk.Button(etiquetasFrame, 
+                                text= '🔽',
+                                command= self.Gain_down, 
+                                activebackground= style.BACKGROUND ,
+                                activeforeground= style.TEXT,
+                                **style.STYLE
+                                ).grid(row=posicion['Gain'][0]+1, column=posicion['Gain'][1]+1)
         
         # Hacemos un Frame superior para los videos
         videoFrame= tk.Frame(self)
