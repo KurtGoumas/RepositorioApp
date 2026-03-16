@@ -1,4 +1,5 @@
 import tkinter as tk
+from tkinter import ttk
 from aplicacion.constantes import style
 from threading import Thread
 from PIL import Image, ImageTk
@@ -83,6 +84,8 @@ class Home(tk.Frame):
 
         self.init_widgets()
 
+    #Funciones que gestionan el bucle
+
     def start(self): #Al pulsar START, guarda los  tiempos e inicia la grabacion
         horas= self.t_horas.get()
         minutos= self.t_minutos.get()
@@ -119,6 +122,7 @@ class Home(tk.Frame):
 
             start_time= time.time()
             self.bucle(start_time, tiempo, intervalo)
+            self.progreso(self.barra1, tiempo, start_time)
             
         else:
             print('Faltan Parámetros por rellenar')
@@ -147,7 +151,7 @@ class Home(tk.Frame):
 
             #start_ciclo = time.time()
             
-            self.after(1000*intervalo, self.salidas, start_time, tiempo, intervalo, t1)
+            self.after(1000*intervalo, self.salidas, start_time, tiempo, intervalo, t1)#t2 para dos camaras
 
         else:
             self.stop()
@@ -191,10 +195,18 @@ class Home(tk.Frame):
                 img = ImageTk.PhotoImage(image=im)
                 lblVideo.configure(image=img)
                 lblVideo.image = img
-                lblVideo.after(34, self.visualizar, cam,lblVideo)
+                lblVideo.after(120, self.visualizar, cam,lblVideo)
             else:
                 lblVideo.image = ""
                 cam.cap.release()
+    def progreso(self, barra1, tiempo, start_time):#Habra que añadir seguna barra cuando haya dos camaras
+            
+        barra1.config({'value': (time.time()-start_time)/tiempo *100})
+        barra1.update()
+
+        barra1.after(10, self.progreso, barra1, tiempo, start_time)
+
+    #Funciones de los botones que cambian parametros de la camara
     
     def Exp_up(self):
         self.cam1.exp_up()
@@ -218,7 +230,7 @@ class Home(tk.Frame):
         Voy a crear un Frame para las etiquetas de tiempo y de intervalos de tiempo
         """
 
-        posicion = {'horas':[0,0], 'minutos':[0,2], 'segundos':[0,4], 'intervalo_min':[1, 0], 'intervalo_s':[1,2],'grabar':[0, 6], 'parar': [1,6], 'Exp': [3,0], 'Gain': [6,0]}
+        posicion = {'horas':[0,0], 'minutos':[0,2], 'segundos':[0,4], 'intervalo_min':[1, 0], 'intervalo_s':[1,2],'grabar':[0, 6], 'parar': [1,6], 'Exp': [3,0], 'Gain': [6,0], 'Bar1':[3,3], 'Bar2':[4,3]}
 
         etiquetasFrame= tk.Frame(self)
         etiquetasFrame.configure(background= style.COMPONENT)
@@ -364,6 +376,14 @@ class Home(tk.Frame):
                                 **style.STYLE
                                 ).grid(row=posicion['Gain'][0]+1, column=posicion['Gain'][1]+1)
         
+        #Barras de progreso
+
+        self.barra1= ttk.Progressbar(etiquetasFrame, variable= self.Frames1)
+        self.barra1.grid(row= posicion['Bar1'][0], column= posicion['Bar1'][1]+1)
+
+        #self.barra2= ttk.Progressbar(etiquetasFrame, self.Frames2)
+        #self.barra2.grid(row= posicion['Bar2'][0], column= posicion['Bar2'][1]+1)
+
         # Hacemos un Frame superior para los videos
         videoFrame= tk.Frame(self)
         videoFrame.configure(background=style.COMPONENT)
