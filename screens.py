@@ -61,6 +61,8 @@ class Home(tk.Frame):
         self.cam1= Camara(self.indices[0])
         #self.cam2= Camara(self.indices[1])
 
+        self.previsualizacion= True #Esto es para la previsualizacion
+
         self.Promedio_fps1= 0
         #self.Promedio_fps2= 0
         self.Frames1= 0
@@ -87,6 +89,7 @@ class Home(tk.Frame):
     #Funciones que gestionan el bucle
 
     def start(self): #Al pulsar START, guarda los  tiempos e inicia la grabacion
+
         horas= self.t_horas.get()
         minutos= self.t_minutos.get()
         segundos= self.t_segundos.get()
@@ -117,8 +120,7 @@ class Home(tk.Frame):
             self.MetadatosGLobalesCamara1= MetadatosGlobalesIniciales(self.cam1.filename, self.cam1)
             #self.MetadatosGLobalesCamara2= MetadatosGlobalesIniciales(self.cam2.filename, self.cam2)
 
-            self.visualizar(self.cam1, self.videolbl1)
-            #self.visualizar(self.cam2,self.videolbl2)
+            self.previsualizacion= False #Para acabar la previsualizacion
 
             start_time= time.time()
             self.bucle(start_time, tiempo, intervalo)
@@ -186,7 +188,7 @@ class Home(tk.Frame):
 
     def visualizar(self,cam, lblVideo):#Funcion para ver los videos en pantalla
 
-        if cam is not None:
+        if cam is not None and self.previsualizacion:
             ret, frame = cam.cap.read()
             if ret == True:
                 frame = imutils.resize(frame, width= cam.shape[1])
@@ -195,10 +197,31 @@ class Home(tk.Frame):
                 img = ImageTk.PhotoImage(image=im)
                 lblVideo.configure(image=img)
                 lblVideo.image = img
-                lblVideo.after(120, self.visualizar, cam,lblVideo)
+                lblVideo.after(10, self.visualizar, cam,lblVideo)
             else:
                 lblVideo.image = ""
                 cam.cap.release()
+    
+    def previsualizar(self):#Funcion que comandara el boton de previsualizado
+
+        self.cam1.preparar()
+        #self.cam2.preparar()
+
+        """
+        La forma en la que hemos definido preparar nos crea una salida que luego se queda muerta.
+        Es por eso que las voy a borrar manualmente.
+        Es un poco sucio pero ya no da la cosa para mas.
+        """
+
+        self.cam1.out= None
+        #self.cam2.out= None
+
+        self.cam1.activar()
+        #self.cam2.activar()
+
+        self.visualizar(self.cam1, self.videolbl1)
+        #self.visualizar(self.cam2,self.videolbl2)
+
     def progreso(self, barra1, tiempo, start_time):#Habra que añadir seguna barra cuando haya dos camaras
             
         barra1.config({'value': (time.time()-start_time)/tiempo *100})
@@ -230,7 +253,7 @@ class Home(tk.Frame):
         Voy a crear un Frame para las etiquetas de tiempo y de intervalos de tiempo
         """
 
-        posicion = {'horas':[0,0], 'minutos':[0,2], 'segundos':[0,4], 'intervalo_min':[1, 0], 'intervalo_s':[1,2],'grabar':[0, 6], 'parar': [1,6], 'Exp': [3,0], 'Gain': [6,0], 'Bar1':[3,3], 'Bar2':[4,3]}
+        posicion = {'horas':[0,0], 'minutos':[0,2], 'segundos':[0,4], 'intervalo_min':[1, 0], 'intervalo_s':[1,2],'grabar':[1, 6], 'parar': [2,6], 'Exp': [3,0], 'Gain': [6,0], 'Bar1':[3,3], 'Bar2':[4,3], 'Prev':[0,6]}
 
         etiquetasFrame= tk.Frame(self)
         etiquetasFrame.configure(background= style.COMPONENT)
@@ -333,6 +356,14 @@ class Home(tk.Frame):
 
 
         #Botones
+        boton_inicio= tk.Button(etiquetasFrame, 
+                                text= 'PREVISUALIZAR',
+                                command= self.previsualizar, 
+                                activebackground= style.BACKGROUND ,
+                                activeforeground= style.TEXT,
+                                **style.STYLE
+                                ).grid(row=posicion['Prev'][0], column=posicion['Prev'][1])
+
         boton_inicio= tk.Button(etiquetasFrame, 
                                 text= 'START',
                                 command= self.start, 
