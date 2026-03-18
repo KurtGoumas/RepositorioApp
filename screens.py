@@ -130,12 +130,10 @@ class Home(tk.Frame):
             print('Faltan Parámetros por rellenar')
 
     def stop(self):#Al pulsar STOP resetea los tiempos y cierra las camaras, rompiendo el bucle
-        self.t_horas= tk.StringVar(self, value='')
-        self.t_minutos= tk.StringVar(self, value='')
-        self.t_segundos= tk.StringVar(self, value= '')
 
-        self.intervalo_minutos= tk.StringVar(self, value= '' )
-        self.intervalo_segundos= tk.StringVar(self, value= '')
+        """
+        Primero vamos a cerrar ambas camaras
+        """
         self.cam1.cerrar()
         #self.cam2.cerrar()
 
@@ -164,6 +162,38 @@ class Home(tk.Frame):
             Resumen1= Resumen_final(self.MetadatosGLobalesCamara1 ,self.Promedio_fps1,self.Frames1)
             #Resumen2= Resumen_final(self.MetadatosGLobalesCamara2 ,self.Promedio_fps2,self.Frames2)
             print("Programa finalizado")
+            print("Restituyendo parametros")
+
+            """
+            Ahora restituimos todo a como estaba al inicio del programa
+            """
+
+            #Restituimos las camaras
+
+            self.indices= listar_indices()
+            self.cam1= Camara(self.indices[0])
+            #self.cam2= Camara(self.indices[1])
+
+            #Restituimos los archivos de metadatos
+
+            self.Promedio_fps1= 0
+            #self.Promedio_fps2= 0
+            self.Frames1= 0
+            #self.Frames2= 0
+
+            self.MetadatosGLobalesCamara1= None
+            self.MetadatosGLobalesCamara2= None
+
+            #Permitimos de nuevo la visualizacion
+
+            self.previsualizacion= True
+
+            #Reiniciamos la barra de progreso
+
+            self.barra1.config({'value': 0})
+            self.barra1.update()
+
+            print('Parametros restituidos')
 
     def salidas(self, start_time, tiempo, intervalo, t1):#Aqui hay que añadirle t2 cuando metamos dos camaras
             MetadatosFinalesCamara1= MetadatosGlobalesFinales(t1)
@@ -409,7 +439,7 @@ class Home(tk.Frame):
         
         #Barras de progreso
 
-        self.barra1= ttk.Progressbar(etiquetasFrame, variable= self.Frames1)
+        self.barra1= ttk.Progressbar(etiquetasFrame)#, variable= self.Frames1)
         self.barra1.grid(row= posicion['Bar1'][0], column= posicion['Bar1'][1]+1)
 
         #self.barra2= ttk.Progressbar(etiquetasFrame, self.Frames2)
