@@ -59,14 +59,14 @@ class Home(tk.Frame):
 
         self.indices= listar_indices()
         self.cam1= Camara(self.indices[0])
-        #self.cam2= Camara(self.indices[1])
+        self.cam2= Camara(self.indices[1])
 
         self.previsualizacion= True #Esto es para la previsualizacion
 
         self.Promedio_fps1= 0
-        #self.Promedio_fps2= 0
+        self.Promedio_fps2= 0
         self.Frames1= 0
-        #self.Frames2= 0
+        self.Frames2= 0
 
         #Todo lo relativo a los metadatos
 
@@ -112,13 +112,13 @@ class Home(tk.Frame):
             #Activamos la camara y lo dejamos todo listo para grabar
 
             self.cam1.preparar()
-            #self.cam2.preparar()
+            self.cam2.preparar()
 
             self.cam1.activar()
-            #self.cam2.activar()
+            self.cam2.activar()
 
             self.MetadatosGLobalesCamara1= MetadatosGlobalesIniciales(self.cam1.filename, self.cam1)
-            #self.MetadatosGLobalesCamara2= MetadatosGlobalesIniciales(self.cam2.filename, self.cam2)
+            self.MetadatosGLobalesCamara2= MetadatosGlobalesIniciales(self.cam2.filename, self.cam2)
 
             self.previsualizacion= False #Para acabar la previsualizacion
 
@@ -135,32 +135,32 @@ class Home(tk.Frame):
         Primero vamos a cerrar ambas camaras
         """
         self.cam1.cerrar()
-        #self.cam2.cerrar()
+        self.cam2.cerrar()
 
     def bucle(self, start_time, tiempo, intervalo):#Este es el bucle grande donde se crean hilos y salidas
 
         if time.time()- start_time<tiempo:
             self.cam1.crear_salida()
-            #self.cam2.crear_salida()
+            self.cam2.crear_salida()
 
             t1 = CamThread(self.cam1,start_time)
-            #t2 = CamThread(self.cam2,start_time)
+            t2 = CamThread(self.cam2,start_time)
 
             t1.start()
-            #t2.start()
+            t2.start()
 
             #start_ciclo = time.time()
             
-            self.after(1000*intervalo, self.salidas, start_time, tiempo, intervalo, t1)#t2 para dos camaras
+            self.after(1000*intervalo, self.salidas, start_time, tiempo, intervalo, t1, t2)#t2 para dos camaras
 
         else:
             self.stop()
 
             self.Promedio_fps1= self.Promedio_fps1/self.Frames1
-            #self.Promedio_fps2= self.Promedio_fps2/self.Frames2
+            self.Promedio_fps2= self.Promedio_fps2/self.Frames2
 
             Resumen1= Resumen_final(self.MetadatosGLobalesCamara1 ,self.Promedio_fps1,self.Frames1)
-            #Resumen2= Resumen_final(self.MetadatosGLobalesCamara2 ,self.Promedio_fps2,self.Frames2)
+            Resumen2= Resumen_final(self.MetadatosGLobalesCamara2 ,self.Promedio_fps2,self.Frames2)
             print("Programa finalizado")
             print("Restituyendo parametros")
 
@@ -172,14 +172,14 @@ class Home(tk.Frame):
 
             self.indices= listar_indices()
             self.cam1= Camara(self.indices[0])
-            #self.cam2= Camara(self.indices[1])
+            self.cam2= Camara(self.indices[1])
 
             #Restituimos los archivos de metadatos
 
             self.Promedio_fps1= 0
-            #self.Promedio_fps2= 0
+            self.Promedio_fps2= 0
             self.Frames1= 0
-            #self.Frames2= 0
+            self.Frames2= 0
 
             self.MetadatosGLobalesCamara1= None
             self.MetadatosGLobalesCamara2= None
@@ -193,25 +193,28 @@ class Home(tk.Frame):
             self.barra1.config({'value': 0})
             self.barra1.update()
 
+            #self.barra2.config({'value': 0})
+            #self.barra2.update()
+
             print('Parametros restituidos')
 
-    def salidas(self, start_time, tiempo, intervalo, t1):#Aqui hay que añadirle t2 cuando metamos dos camaras
+    def salidas(self, start_time, tiempo, intervalo, t1, t2):#Aqui hay que añadirle t2 cuando metamos dos camaras
             MetadatosFinalesCamara1= MetadatosGlobalesFinales(t1)
-            #MetadatosFinalesCamara2= MetadatosGlobalesFinales(t2)
+            MetadatosFinalesCamara2= MetadatosGlobalesFinales(t2)
 
             self.Promedio_fps1+= MetadatosFinalesCamara1[0]
-            #self.Promedio_fps2+=MetadatosFinalesCamara2[0]
+            self.Promedio_fps2+=MetadatosFinalesCamara2[0]
 
             self.Frames1+= MetadatosFinalesCamara1[1]
-            #self.Frames2+= MetadatosFinalesCamara2[1]
+            self.Frames2+= MetadatosFinalesCamara2[1]
 
             t1.stop()
-            #t2.stop()
+            t2.stop()
             t1.join()
-            #t2.join()
+            t2.join()
 
             self.cam1.cerrar_salida()
-            #self.cam2.cerrar_salida()
+            self.cam2.cerrar_salida()
             cv2.destroyAllWindows()
 
             self.bucle(start_time, tiempo, intervalo)
@@ -235,7 +238,7 @@ class Home(tk.Frame):
     def previsualizar(self):#Funcion que comandara el boton de previsualizado
 
         self.cam1.preparar()
-        #self.cam2.preparar()
+        self.cam2.preparar()
 
         """
         La forma en la que hemos definido preparar nos crea una salida que luego se queda muerta.
@@ -244,13 +247,13 @@ class Home(tk.Frame):
         """
 
         self.cam1.out= None
-        #self.cam2.out= None
+        self.cam2.out= None
 
         self.cam1.activar()
-        #self.cam2.activar()
+        self.cam2.activar()
 
         self.visualizar(self.cam1, self.videolbl1)
-        #self.visualizar(self.cam2,self.videolbl2)
+        self.visualizar(self.cam2,self.videolbl2)
 
     def progreso(self, barra1, tiempo, start_time):#Habra que añadir seguna barra cuando haya dos camaras
             
@@ -263,19 +266,19 @@ class Home(tk.Frame):
     
     def Exp_up(self):
         self.cam1.exp_up()
-        #self.cam2.exp_up()
+        self.cam2.exp_up()
 
     def Exp_down(self):
         self.cam1.exp_down()
-        #self.cam2.exp_down()
+        self.cam2.exp_down()
 
     def Gain_up(self):
         self.cam1.gain_up()
-        #self.cam2.gain_up()
+        self.cam2.gain_up()
     
     def Gain_down(self):
         self.cam1.gain_down()
-        #self.cam2.gain_down()
+        self.cam2.gain_down()
     
     def Cambiar_a_Procesado(self):
         self.controller.show_frame(Procesado)
@@ -453,8 +456,8 @@ class Home(tk.Frame):
         self.barra1= ttk.Progressbar(etiquetasFrame)#, variable= self.Frames1)
         self.barra1.grid(row= posicion['Bar1'][0], column= posicion['Bar1'][1]+1)
 
-        #self.barra2= ttk.Progressbar(etiquetasFrame, self.Frames2)
-        #self.barra2.grid(row= posicion['Bar2'][0], column= posicion['Bar2'][1]+1)
+        self.barra2= ttk.Progressbar(etiquetasFrame)
+        self.barra2.grid(row= posicion['Bar2'][0], column= posicion['Bar2'][1]+1)
 
         # Hacemos un Frame superior para los videos
         videoFrame= tk.Frame(self)
