@@ -22,7 +22,7 @@ class Manager(tk.Tk):
         container.grid_rowconfigure(0, weight=1)
 
         self.frames= {}
-        for F in (Home, Monitor):
+        for F in (Home, Procesado):
             frame= F(container, self)#Dotamos a las pantallas de su parent y su controller
             self.frames[F]= frame
             frame.grid(row= 0, column= 0, sticky= tk.NSEW)

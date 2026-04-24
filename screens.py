@@ -276,6 +276,9 @@ class Home(tk.Frame):
     def Gain_down(self):
         self.cam1.gain_down()
         #self.cam2.gain_down()
+    
+    def Cambiar_a_Procesado(self):
+        self.controller.show_frame(Procesado)
 
     def init_widgets(self): #Aqui iran todos los botones y demas
 
@@ -283,7 +286,7 @@ class Home(tk.Frame):
         Voy a crear un Frame para las etiquetas de tiempo y de intervalos de tiempo
         """
 
-        posicion = {'horas':[0,0], 'minutos':[0,2], 'segundos':[0,4], 'intervalo_min':[1, 0], 'intervalo_s':[1,2],'grabar':[1, 6], 'parar': [2,6], 'Exp': [3,0], 'Gain': [6,0], 'Bar1':[3,3], 'Bar2':[4,3], 'Prev':[0,6]}
+        posicion = {'horas':[0,0], 'minutos':[0,2], 'segundos':[0,4], 'intervalo_min':[1, 0], 'intervalo_s':[1,2],'grabar':[1, 6], 'parar': [2,6], 'Exp': [3,0], 'Gain': [6,0], 'Bar1':[3,3], 'Bar2':[4,3], 'Prev':[0,6], 'Procesador':[3,6]}
 
         etiquetasFrame= tk.Frame(self)
         etiquetasFrame.configure(background= style.COMPONENT)
@@ -437,6 +440,14 @@ class Home(tk.Frame):
                                 **style.STYLE
                                 ).grid(row=posicion['Gain'][0]+1, column=posicion['Gain'][1]+1)
         
+        boton_Procesado= boton_Gain_down= tk.Button(etiquetasFrame, 
+                                text= 'Procesar',
+                                command= self.Cambiar_a_Procesado, 
+                                activebackground= style.BACKGROUND ,
+                                activeforeground= style.TEXT,
+                                **style.STYLE
+                                ).grid(row=posicion['Procesador'][0], column=posicion['Procesador'][1])
+        
         #Barras de progreso
 
         self.barra1= ttk.Progressbar(etiquetasFrame)#, variable= self.Frames1)
@@ -464,7 +475,7 @@ class Home(tk.Frame):
         self.videolbl2= tk.Label(videoFrame, **style.STYLE)
         self.videolbl2.grid(column= 2, row= 0, columnspan= 2)
 
-class Monitor(tk.Frame):
+class Procesado(tk.Frame):
 
     def __init__(self, parent, controller):
         super().__init__(parent)
