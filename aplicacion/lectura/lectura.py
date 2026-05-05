@@ -1,4 +1,5 @@
 import numpy as np 
+import scipy as scp
 import matplotlib.pyplot as plt
 import cv2
 
@@ -33,9 +34,15 @@ def leer(filename):
         if not ret:
             break
         
-        video_lista.append(frame)
-    video_array= np.array(video_lista)
-    video_array= video_array[:,:,:,-1]#Para quedarnos con una matriz de 3D del tipo que queremos
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)#Lo pasamos a escala de grises para quedarnos solo con uno
+        video_lista.append(frame[100:620:,400:880])#Lo añadimos a una lista recortando a mano todo lo que no sea pecera, se debe cambiar segun el setup
+    video_array= np.array(video_lista)#Lo transformamos en un array que nos gusta mas trabajar asi 
+    fondo= scp.stats.mode(video_array[:])[0]#Creamos un fondo quedandonos con la moda de cada uno de los puntos de cada fotograma en el tiempo
+
+    '''
+    En fondo nos quedamos con el cero porque suelta dos arrays, y el unico que
+    interesa es el primero
+    '''
 
     '''
     Una vez tenemos el video en forma de array queremos.
@@ -48,19 +55,32 @@ def leer(filename):
     Binarizamos con np.where(array< umbral, valor si verdadero= 0, valor si falso=1 )
     '''
 
-    video_array= video_array/255
+    video_array= video_array/255 #Normalizamos
     
-    video_array= np.where(video_array<0.5,0,1)
+    fondo= fondo/255 #Normalizamos fondo
+    
+    video_array= np.where(video_array<0.5,0,1) #Binarizamos
+    
+    fondo= np.where(fondo<0.5,0,1) #Binarizamos fondo
 
-    video_array= video_array.astype(np.float64)
+    video_array= video_array.astype(np.float64)#Esto hay que ponerlo tras tratar el video para que se lea bien, cuando no, no se pone
+    
+    fondo= fondo.astype(np.float64)
 
-    return video_array
+    return video_array, fondo
 
 #aqui trato el video como array 
 
-video_array= leer(r"C:\Users\adelu\OneDrive\Escritorio\FisicaAlicante\Año_V\Gambas_con_Alzheimer\RepositorioApp\videos\5-4-2026-12-3-21_0.mp4")
+video_array, fondo= leer(r"C:\Users\adelu\OneDrive\Escritorio\FisicaAlicante\Año_V\Gambas_con_Alzheimer\RepositorioApp\videos\24-4-2026-14-43-19_0.mp4")
 
 #Ahora vamos a representarlo
 
 Frame1= video_array[1]
 cv2.imshow('prueba', Frame1)
+
+fondo= fondo
+cv2.imshow('prueba fondo', fondo)
+
+Frame_No_Fondo= Frame1-fondo
+
+cv2.imshow('Restado', Frame_No_Fondo)
