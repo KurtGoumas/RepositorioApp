@@ -37,14 +37,23 @@ def leer(filename):
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)#Lo pasamos a escala de grises para quedarnos solo con uno
         video_lista.append(frame[100:620:,400:880])#Lo añadimos a una lista recortando a mano todo lo que no sea pecera, se debe cambiar segun el setup
     video_array= np.array(video_lista)#Lo transformamos en un array que nos gusta mas trabajar asi 
-    fondo= scp.stats.mode(video_array[:])[0]#Creamos un fondo quedandonos con la moda de cada uno de los puntos de cada fotograma en el tiempo
+    
+    """
+    Para crear el fondo tomamos 100 fotogramas aleatorios de video_array y nos quedamos con la moda
+    """
+    
+    aleatorios= np.random.choice(len(video_array), size= min(100,len(video_array)),replace= False)
+    
+    fondo= scp.stats.mode(video_array[aleatorios])[0]#Creamos un fondo quedandonos con la moda de cada uno de los puntos de cada fotograma en el tiempo
+
+    video_array= video_array.astype(np.float32)#(np.float64) Esto hay que ponerlo tras tratar el video para que se lea bien, cuando no, no se pone
+    
+    fondo= fondo.astype(np.float32)#(np.float64)
 
     '''
     En fondo nos quedamos con el cero porque suelta dos arrays, y el unico que
     interesa es el primero
-    '''
-
-    '''
+    
     Una vez tenemos el video en forma de array queremos.
 
     Normalizar, para que todos los valores esten entre 0 y 1
@@ -55,6 +64,7 @@ def leer(filename):
     Binarizamos con np.where(array< umbral, valor si verdadero= 0, valor si falso=1 )
     '''
 
+    '''
     video_array= video_array/255 #Normalizamos
     
     fondo= fondo/255 #Normalizamos fondo
@@ -63,15 +73,56 @@ def leer(filename):
     
     fondo= np.where(fondo<0.5,0,1) #Binarizamos fondo
 
-    video_array= video_array.astype(np.float64)#Esto hay que ponerlo tras tratar el video para que se lea bien, cuando no, no se pone
+    video_array= video_array.astype(np.float32)#(np.float64) Esto hay que ponerlo tras tratar el video para que se lea bien, cuando no, no se pone
     
-    fondo= fondo.astype(np.float64)
+    fondo= fondo.astype(np.float32)#(np.float64)
+    
+    #Parece que vamos a probar a restar primero y a normalizar y todo eso despues
+    '''
+    
+    
+    """
+    Muy bien, aqui ya tenemos el fotograma y el fondo operando, ahora queremos 
+    restarlos y despues ir puliendo la imagen para quitar todo lo que no sea 
+    objeto
+    
+    Para ello utilizaremos un metodo de OpenCV llamado erode() que nos ayudara
+    a base de iteraciones volviendo nulos todos los pixeles que no esten rodeados
+    de mas pixeles luminosos
+    
+    Kernel es algo asi comola ventana que va a tomar el metodo para ver los 
+    alrededores del pixel
+    """
+    
+    restado= video_array - fondo#Obtenemos un video sin el fondo
+    
+    restado= np.clip(restado,0,255)
+    
+    
+    #restado= np.where(restado<0.5,0,1) #Binarizamos fondo
+    restado= restado.astype(np.uint8)#Cambiamos el formato a uno que se trague el filtro de la mediana
+    
 
-    return video_array, fondo
+    #fondo= np.where(fondo<0.5,0,1) #Binarizamos fondo
+    
+    for i in range(restado.shape[2]):
+        restado[:,:,i]= cv2.medianBlur(restado[:,:,i],5) 
+        
+    
+    restado= restado.astype(np.float32)
+      
+    restado= (restado>60).astype(np.uint8)*255 #Binarizamos (mas o menos)
+    
+    
+    #restado= restado/255 #normalizamos 
+    #restado= restado.astype(np.uint8)
+    #restado= restado*255
+
+    return video_array, fondo, restado
 
 #aqui trato el video como array 
 
-video_array, fondo= leer(r"C:\Users\adelu\OneDrive\Escritorio\FisicaAlicante\Año_V\Gambas_con_Alzheimer\RepositorioApp\videos\24-4-2026-14-43-19_0.mp4")
+video_array, fondo, restado= leer(r"C:\Users\adelu\OneDrive\Escritorio\FisicaAlicante\Año_V\Gambas_con_Alzheimer\RepositorioApp\videos\24-4-2026-14-43-19_0.mp4")
 
 #Ahora vamos a representarlo
 
@@ -81,6 +132,6 @@ cv2.imshow('prueba', Frame1)
 fondo= fondo
 cv2.imshow('prueba fondo', fondo)
 
-Frame_No_Fondo= Frame1-fondo
+Frame_No_Fondo= restado[1]
 
 cv2.imshow('Restado', Frame_No_Fondo)
