@@ -101,18 +101,16 @@ def leer(filename):
     
     #restado= np.where(restado<0.5,0,1) #Binarizamos fondo
     restado= restado.astype(np.uint8)#Cambiamos el formato a uno que se trague el filtro de la mediana
-    
 
     #fondo= np.where(fondo<0.5,0,1) #Binarizamos fondo
     
-    for i in range(restado.shape[2]):
-        restado[:,:,i]= cv2.medianBlur(restado[:,:,i],5) 
-        
+    for i in range(restado.shape[0]):
+
+        restado[i]= cv2.medianBlur(restado[i],7)
     
     restado= restado.astype(np.float32)
       
     restado= (restado>60).astype(np.uint8)*255 #Binarizamos (mas o menos)
-    
     
     #restado= restado/255 #normalizamos 
     #restado= restado.astype(np.uint8)
@@ -125,13 +123,13 @@ def leer(filename):
 video_array, fondo, restado= leer(r"C:\Users\adelu\OneDrive\Escritorio\FisicaAlicante\Año_V\Gambas_con_Alzheimer\RepositorioApp\videos\24-4-2026-14-43-19_0.mp4")
 
 #Ahora vamos a representarlo
-
+'''
 Frame1= video_array[1]
 cv2.imshow('prueba', Frame1)
 
 fondo= fondo
 cv2.imshow('prueba fondo', fondo)
-
+'''
 Frame_No_Fondo= restado[1]
 
 cv2.imshow('Restado', Frame_No_Fondo)
