@@ -115,6 +115,45 @@ def leer(filename):
     #restado= restado/255 #normalizamos 
     #restado= restado.astype(np.uint8)
     #restado= restado*255
+    
+    """
+    Perfecto, a tenemos casi todo hecho. Tenemos el frame restado y hemos
+    conseguido practicamente aislar el objet. La idea ahora viene a ser identificar todos los 
+    candidatos a objetos y quedarnos unicamente con los que sean verdaderos.
+    
+    Para ello usaremos cv2.connectedComponentWithStats(imagen). Al cual le pasas un fotograma y
+    te devuelve.
+    
+    1. Numero de objetos detectados (el indice 0 es el fondo)
+    2. Matriz donde cada pixel tiene el indice del objeto al que pertenece
+    3. Estadisticas geometricas [x,y,width,height, area]. Con el area podemos jugar para
+    discretizar los objetos que nos valen
+    4. Centros de masa. Esto es lo que finalmente nos vamos a guardar
+    
+    Importante que la imagen que le das sea una de 8bit con un unico canal
+    """
+    centroides_validos=[]
+    area_valida= 300
+    for fotograma in restado:
+        num_labels, labels, stats, centroids= cv2.connectedComponentsWithStats(fotograma)
+        """
+        Aqui tomamos todos los objetos, ahora los vamos a discriminar por area y quedarnos con 
+        los centros de masa
+        """
+        for i in range(1,num_labels):
+            if stats[i][4]>=area_valida:
+                centroides_validos.append(centroids[i])
+                
+    centroides_validos= np.array(centroides_validos)
+    print(centroides_validos)
+    
+    """
+    fotograma= restado[1]
+    num_labels, labels, stats, centroids= cv2.connectedComponentsWithStats(fotograma)
+    print(num_labels)
+    print(stats)
+    print(centroids) 
+    """
 
     return video_array, fondo, restado
 
