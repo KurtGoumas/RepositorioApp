@@ -110,7 +110,7 @@ def leer(filename):
     
     restado= restado.astype(np.float32)
       
-    restado= (restado>60).astype(np.uint8)*255 #Binarizamos (mas o menos)
+    restado= (restado>40).astype(np.uint8)*255 #Binarizamos (mas o menos)
     
     #restado= restado/255 #normalizamos 
     #restado= restado.astype(np.uint8)
@@ -132,20 +132,30 @@ def leer(filename):
     
     Importante que la imagen que le das sea una de 8bit con un unico canal
     """
+    
+    #Vamos a tratar el primer fotograma aqui y luego ya tomamos todo dentro del bucle
+    
     centroides_validos=[]
     area_valida= 300
+    contador=0
     for fotograma in restado:
+        contador+=1
         num_labels, labels, stats, centroids= cv2.connectedComponentsWithStats(fotograma)
         """
         Aqui tomamos todos los objetos, ahora los vamos a discriminar por area y quedarnos con 
         los centros de masa
         """
-        for i in range(1,num_labels):
-            if stats[i][4]>=area_valida:
+        stats_bien= stats[1:]
+        areas= stats_bien[:,4]
+        print(areas)
+        for i in range(num_labels-1):#Porque me he quitado el area del fondo
+            if areas[i]==max(areas):#areas[i]>=area_valida or areas[i]== max(areas):
                 centroides_validos.append(centroids[i])
-                
+                print('cogido en fotograma, ',contador)
+        print('fotograma, ',contador)
     centroides_validos= np.array(centroides_validos)
     print(centroides_validos)
+    print(len(centroides_validos))
     
     """
     fotograma= restado[1]
@@ -169,6 +179,6 @@ cv2.imshow('prueba', Frame1)
 fondo= fondo
 cv2.imshow('prueba fondo', fondo)
 '''
-Frame_No_Fondo= restado[1]
+Frame_No_Fondo= restado[374]
 
 cv2.imshow('Restado', Frame_No_Fondo)
