@@ -16,17 +16,9 @@ comodamente.
 Por otro lado podremos tomar toda una carpeta y trabajar con ella.
 '''
 
-#plt.close('all')
-
 def leer(filename):
 
     cap= cv2.VideoCapture(filename)
-    
-    #ret, frame= cap.read()
-    #h,w,_= frame.shape
-    #_,_,l= frame.shape
-
-    #video_array= np.zeros([h,w,l])
 
     video_lista= []
     while True:
@@ -35,7 +27,7 @@ def leer(filename):
             break
         
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)#Lo pasamos a escala de grises para quedarnos solo con uno
-        video_lista.append(frame[100:620:,400:880])#Lo añadimos a una lista recortando a mano todo lo que no sea pecera, se debe cambiar segun el setup
+        video_lista.append(frame[200:800:,500:1300])#Lo añadimos a una lista recortando a mano todo lo que no sea pecera, se debe cambiar segun el setup
     video_array= np.array(video_lista)#Lo transformamos en un array que nos gusta mas trabajar asi 
     
     """
@@ -46,78 +38,43 @@ def leer(filename):
     
     fondo= scp.stats.mode(video_array[aleatorios])[0]#Creamos un fondo quedandonos con la moda de cada uno de los puntos de cada fotograma en el tiempo
 
-    video_array= video_array.astype(np.float32)#(np.float64) Esto hay que ponerlo tras tratar el video para que se lea bien, cuando no, no se pone
+    video_array= video_array.astype(np.float32)#Este formato es el que usamos para restarlos entre si
     
-    fondo= fondo.astype(np.float32)#(np.float64)
+    fondo= fondo.astype(np.float32)#
 
     '''
     En fondo nos quedamos con el cero porque suelta dos arrays, y el unico que
     interesa es el primero
-    
-    Una vez tenemos el video en forma de array queremos.
-
-    Normalizar, para que todos los valores esten entre 0 y 1
-    Binarizar, para que todos los valores por debajo de un umbral sean cero y los superiores 1
-
-    Normalizamos dividiendo entre 255 porque al ser 8bit, ese sera el valor maximo de luminancia
-
-    Binarizamos con np.where(array< umbral, valor si verdadero= 0, valor si falso=1 )
-    '''
-
-    '''
-    video_array= video_array/255 #Normalizamos
-    
-    fondo= fondo/255 #Normalizamos fondo
-    
-    video_array= np.where(video_array<0.5,0,1) #Binarizamos
-    
-    fondo= np.where(fondo<0.5,0,1) #Binarizamos fondo
-
-    video_array= video_array.astype(np.float32)#(np.float64) Esto hay que ponerlo tras tratar el video para que se lea bien, cuando no, no se pone
-    
-    fondo= fondo.astype(np.float32)#(np.float64)
-    
-    #Parece que vamos a probar a restar primero y a normalizar y todo eso despues
-    '''
-    
+    '''    
     
     """
     Muy bien, aqui ya tenemos el fotograma y el fondo operando, ahora queremos 
     restarlos y despues ir puliendo la imagen para quitar todo lo que no sea 
     objeto
     
-    Para ello utilizaremos un metodo de OpenCV llamado erode() que nos ayudara
-    a base de iteraciones volviendo nulos todos los pixeles que no esten rodeados
-    de mas pixeles luminosos
-    
-    Kernel es algo asi comola ventana que va a tomar el metodo para ver los 
-    alrededores del pixel
+    Para ello usaremos un filtro de mediana con el metodo cv2.medianBlur
     """
     
     restado= video_array - fondo#Obtenemos un video sin el fondo
     
     restado= np.clip(restado,0,255)
     
-    
-    #restado= np.where(restado<0.5,0,1) #Binarizamos fondo
     restado= restado.astype(np.uint8)#Cambiamos el formato a uno que se trague el filtro de la mediana
-
-    #fondo= np.where(fondo<0.5,0,1) #Binarizamos fondo
     
-    for i in range(restado.shape[0]):
+    for i in range(restado.shape[0]):#Hay que pasarle los fotogramas uno a uno porque solo acepta uint8 de un canal
 
         restado[i]= cv2.medianBlur(restado[i],7)
     
-    restado= restado.astype(np.float32)
+    restado= restado.astype(np.float32)#Volvemos a cambiar el formato para poder binarizar mas o menos
       
-    restado= (restado>40).astype(np.uint8)*255 #Binarizamos (mas o menos)
-    
-    #restado= restado/255 #normalizamos 
-    #restado= restado.astype(np.uint8)
-    #restado= restado*255
+    restado= (restado>100).astype(np.uint8)*255 #Binarizamos y volvemos a cambiar el formato para luego poder mostrarlo
+
+    return restado
+
+def centroides(restado): #Le pasamos un video ya restado y procesado
     
     """
-    Perfecto, a tenemos casi todo hecho. Tenemos el frame restado y hemos
+    Perfecto, ya tenemos casi todo hecho. Tenemos el frame restado y hemos
     conseguido practicamente aislar el objet. La idea ahora viene a ser identificar todos los 
     candidatos a objetos y quedarnos unicamente con los que sean verdaderos.
     
@@ -133,52 +90,38 @@ def leer(filename):
     Importante que la imagen que le das sea una de 8bit con un unico canal
     """
     
-    #Vamos a tratar el primer fotograma aqui y luego ya tomamos todo dentro del bucle
-    
     centroides_validos=[]
-    area_valida= 300
-    contador=0
+    area_valida= 30
+
     for fotograma in restado:
-        contador+=1
+
         num_labels, labels, stats, centroids= cv2.connectedComponentsWithStats(fotograma)
+        
         """
         Aqui tomamos todos los objetos, ahora los vamos a discriminar por area y quedarnos con 
         los centros de masa
         """
-        stats_bien= stats[1:]
-        areas= stats_bien[:,4]
-        print(areas)
+        
+        stats_bien= stats[1:]#Hemos quitado la primera fila que es el fondo
+        areas= stats_bien[:,4]#Tomamos el cuarto objeto que son las areas de todo lo que identifica
+        
         for i in range(num_labels-1):#Porque me he quitado el area del fondo
-            if areas[i]==max(areas):#areas[i]>=area_valida or areas[i]== max(areas):
+        
+            if areas[i]>= area_valida and areas[i]==max(areas): #areas[i]>=area_valida or areas[i]== max(areas):
+                
                 centroides_validos.append(centroids[i])
-                print('cogido en fotograma, ',contador)
-        print('fotograma, ',contador)
+                
     centroides_validos= np.array(centroides_validos)
-    print(centroides_validos)
-    print(len(centroides_validos))
     
-    """
-    fotograma= restado[1]
-    num_labels, labels, stats, centroids= cv2.connectedComponentsWithStats(fotograma)
-    print(num_labels)
-    print(stats)
-    print(centroids) 
-    """
-
-    return video_array, fondo, restado
+    return centroides_validos   
 
 #aqui trato el video como array 
 
-video_array, fondo, restado= leer(r"C:\Users\adelu\OneDrive\Escritorio\FisicaAlicante\Año_V\Gambas_con_Alzheimer\RepositorioApp\videos\24-4-2026-14-43-19_0.mp4")
+restado= leer(r"C:\Users\adelu\OneDrive\Escritorio\FisicaAlicante\Año_V\Gambas_con_Alzheimer\RepositorioApp\videos\22-5-2026-12-7-18_1.mp4")
 
+centroides_validos= centroides(restado)
 #Ahora vamos a representarlo
-'''
-Frame1= video_array[1]
-cv2.imshow('prueba', Frame1)
 
-fondo= fondo
-cv2.imshow('prueba fondo', fondo)
-'''
-Frame_No_Fondo= restado[374]
+Frame_No_Fondo= restado[600]
 
 cv2.imshow('Restado', Frame_No_Fondo)
