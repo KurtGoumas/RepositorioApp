@@ -36,7 +36,7 @@ def leer(filename):
     
     aleatorios= np.random.choice(len(video_array), size= min(100,len(video_array)),replace= False)
     
-    fondo= scp.stats.mode(video_array[aleatorios])[0]#Creamos un fondo quedandonos con la moda de cada uno de los puntos de cada fotograma en el tiempo
+    fondo= scp.stats.mode(video_array[aleatorios], keepdims= True)[0]#Creamos un fondo quedandonos con la moda de cada uno de los puntos de cada fotograma en el tiempo
 
     video_array= video_array.astype(np.float32)#Este formato es el que usamos para restarlos entre si
     
@@ -114,14 +114,3 @@ def centroides(restado): #Le pasamos un video ya restado y procesado
     centroides_validos= np.array(centroides_validos)
     
     return centroides_validos   
-
-#aqui trato el video como array 
-
-restado= leer(r"C:\Users\adelu\OneDrive\Escritorio\FisicaAlicante\Año_V\Gambas_con_Alzheimer\RepositorioApp\videos\22-5-2026-12-7-18_1.mp4")
-
-centroides_validos= centroides(restado)
-#Ahora vamos a representarlo
-
-Frame_No_Fondo= restado[600]
-
-cv2.imshow('Restado', Frame_No_Fondo)

@@ -1,14 +1,17 @@
 import tkinter as tk
 from tkinter import ttk
-from aplicacion.constantes import style
+from tkinter import filedialog
+
 from threading import Thread
 from PIL import Image, ImageTk
 import imutils
 import time
 import cv2
 
+from aplicacion.constantes import style
 from aplicacion.grabacion.Camara_arreglo import Camara
 from aplicacion.grabacion.control import *
+from aplicacion.lectura import lectura
 
 """
 En la pantalla de Home tendremos que indicar el tiempo 
@@ -85,6 +88,9 @@ class Home(tk.Frame):
         self.text_entry_width = 10
 
         self.init_widgets()
+
+        #Barra de progreso
+        self.progreso_id= None
 
     #Funciones que gestionan el bucle
 
@@ -190,6 +196,10 @@ class Home(tk.Frame):
 
             #Reiniciamos la barra de progreso
 
+            if self._progreso_id is not None:
+                self.after_cancel(self._progreso_id)
+                self._progreso_id = None
+
             self.barra1.config({'value': 0})
             self.barra1.update()
 
@@ -260,7 +270,7 @@ class Home(tk.Frame):
         barra1.config({'value': (time.time()-start_time)/tiempo *100})
         barra1.update()
 
-        barra1.after(10, self.progreso, barra1, tiempo, start_time)
+        self.progreso_id= barra1.after(10, self.progreso, barra1, tiempo, start_time)
 
     #Funciones de los botones que cambian parametros de la camara
     
@@ -469,14 +479,23 @@ class Home(tk.Frame):
         )
 
         '''
+        Vamos a dotar de peso a las ventanas donde se previsualizan los videos para que
+        no se fagociten uno al otro 
+        '''
+        videoFrame.grid_columnconfigure(0, weight=1)
+        videoFrame.grid_columnconfigure(1, weight=1)
+        videoFrame.grid_columnconfigure(2, weight=1)
+        videoFrame.grid_columnconfigure(3, weight=1)
+
+        '''
         Para los videos vamos a necesitar una Label que es lo que rellenaremos con las
         sucesivas imagenes
         '''
 
         self.videolbl1= tk.Label(videoFrame, **style.STYLE)
-        self.videolbl1.grid(column= 0, row= 0, columnspan= 2)
+        self.videolbl1.grid(column= 0, row= 0, columnspan= 2, sticky= tk.NSEW)
         self.videolbl2= tk.Label(videoFrame, **style.STYLE)
-        self.videolbl2.grid(column= 2, row= 0, columnspan= 2)
+        self.videolbl2.grid(column= 2, row= 0, columnspan= 2, sticky= tk.NSEW)
 
 class Procesado(tk.Frame):
 
@@ -484,3 +503,76 @@ class Procesado(tk.Frame):
         super().__init__(parent)
         self.configure(background= style.BACKGROUND)
         self.controller= controller
+
+
+    #Funciones que gestionan el bucle
+
+    def leer_y_procesar_videos(self):
+
+        """
+        Esta funcion que es una que nos ayudara para subir videos y que los
+        empiece a procesar.
+        Primero vamos a pedir que se nos entreguen videos para procesar.
+        Una vez los tenemos, en el if estamos creando un hilo, similar a lo que haciamos
+        con las camaras, para que esta tarea no nos ocupe el bucle principal
+
+        Una nota importante es que si quieres luego meter una barra de progreso tienes
+        que ir con cuidado y usar un self.after() para conectar el hilo con el principal
+        """
+
+        archivos= filedialog.askopenfilenames(
+            title= "Selecciona los vídeos",
+            filetypes= [("Archivos de vídeo","*.mp4")]
+        )
+
+        if archivos:
+            t= Thread(target= self.procesar, args= (archivos,),daemon= True)
+            t.start()#el hilo deberia detenerse al acabarse la funcion procesar, ya veremos
+
+    def procesar(self, archivos):
+
+        """
+        Esta funcion esta subordinada a la de leer_y_procesar_videos. 
+        Basicamente, lo que escribamos aqui va a ser invocado por la funcion mas grande y
+        repetido tantas veces como videos carguemos a la aplicacion
+        De tal forma que no seran devueltas las listas de centroides.
+        """
+
+        self.procesado= [] #Es una lista que rellenaremos con arrays de centroides
+        #Uno del primer video y otro del segundo.
+
+        for archivo in archivos:
+            restado= lectura.leer(archivo)
+            centroides_validos= lectura.centroides(restado)
+            self.procesado.append(centroides_validos)
+        self.porcesado= np.array(self.procesado)
+
+        return self.procesado
+
+    def init__widgets(self): #Aqui van los botones y demas 
+
+        posicion= {'Select': [0,0]}
+
+        #Vamos a hacer un frame en el que poner los botones para empezar
+
+        botonesFrame= tk.Frame(self)
+        botonesFrame.configure(background=style.COMPONENT)
+        botonesFrame.pack(
+            side= tk.TOP,
+            fill= tk.BOTH,
+            expand= True,
+        ) 
+
+        #Botones
+
+        boton_inicio= tk.Button(botonesFrame, 
+                                text= 'Seleccionar Vídeos',
+                                command= self.leer_y_procesar_videos, 
+                                activebackground= style.BACKGROUND ,
+                                activeforeground= style.TEXT,
+                                **style.STYLE
+                                ).grid(row=posicion['Select'][0], column=posicion['Select'][1])
+
+
+
+
