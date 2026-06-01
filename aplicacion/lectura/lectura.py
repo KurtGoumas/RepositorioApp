@@ -3,6 +3,8 @@ import scipy as scp
 import matplotlib.pyplot as plt
 import cv2
 
+from numba import njit, prange
+from numba.typed import List
 from matplotlib import cm
 from matplotlib.ticker import LinearLocator
 
@@ -71,11 +73,23 @@ def leer(filename):
 
     return restado
 
+@njit(fastmath= True, parallel= True)
+def cent_correspondencias(cent_primitivo_ant, cent_primitivo_act, peso= 1.):
+    cent_anterior = []
+    cent_actual = []
+    for j in prange(len(cent_primitivo_act)):
+        for k in range(len(cent_primitivo_ant)):
+            norma= ((cent_primitivo_ant[j][0]-cent_primitivo_act[k][0])**2 + (cent_primitivo_ant[j][1]-cent_primitivo_act[k][1])**2)**0.5
+            if norma<= peso:
+                cent_anterior.append(cent_primitivo_ant[k])
+                cent_actual.append(cent_primitivo_act[j])
+    return cent_anterior, cent_actual
+
 def centroides(restado): #Le pasamos un video ya restado y procesado
     
     """
     Perfecto, ya tenemos casi todo hecho. Tenemos el frame restado y hemos
-    conseguido practicamente aislar el objet. La idea ahora viene a ser identificar todos los 
+    conseguido practicamente aislar el object. La idea ahora viene a ser identificar todos los 
     candidatos a objetos y quedarnos unicamente con los que sean verdaderos.
     
     Para ello usaremos cv2.connectedComponentWithStats(imagen). Al cual le pasas un fotograma y
@@ -88,10 +102,22 @@ def centroides(restado): #Le pasamos un video ya restado y procesado
     4. Centros de masa. Esto es lo que finalmente nos vamos a guardar
     
     Importante que la imagen que le das sea una de 8bit con un unico canal
+    
+    La idea es crear una lsita vacia de centroides, esta lista vacia la iremos llenando fotograma
+    a fotograma de forma que nos quede centroides:[fotogramas:[objeto:[x,y],[x,y],...],[],...]
+    
+    Una vez tengamos esto, iremos quitando objetos relacionando los objetos de dos frames 
+    consecutivos, los que tengan correspondencia seran preservados, los que no borrados
+    
+    Finalmente, nos deberia quedar un array similar pero ahora todos los candidatos deberian ser
+    objetos reales (luego veremos que los reflejos tienen algo que decir ante esto, pero nos
+                    los sacudiremos cuando comparemos las dos camaras)
     """
     
-    centroides_validos=[]
-    area_valida= 30
+    n= len(restado)
+    
+    centroides_aproximados= []#Es la lista preliminar de centroides antes de que desechemos los falsos
+    area_valida= 50
 
     for fotograma in restado:
 
@@ -105,12 +131,40 @@ def centroides(restado): #Le pasamos un video ya restado y procesado
         stats_bien= stats[1:]#Hemos quitado la primera fila que es el fondo
         areas= stats_bien[:,4]#Tomamos el cuarto objeto que son las areas de todo lo que identifica
         
+        centroides_fotograma= [] #Aqui meteremos todos los centroides posiblemente validos
         for i in range(num_labels-1):#Porque me he quitado el area del fondo
         
-            if areas[i]>= area_valida and areas[i]==max(areas): #areas[i]>=area_valida or areas[i]== max(areas):
+            if areas[i]>= area_valida or areas[i]==max(areas):#Para al menos asegurarnos de pillar un centroide, la gamba deberia ser el mayor
                 
-                centroides_validos.append(centroids[i])
+                centroides_fotograma.append(centroids[i])
                 
-    centroides_validos= np.array(centroides_validos)
+        centroides_fotograma= np.array(centroides_fotograma)#Lo transformamos en array
+        
+        
+        centroides_aproximados.append(centroides_fotograma)#En cada fotograma habra un array de objetos
     
-    return centroides_validos   
+    """
+    Ahora que ya tenemos la lista de centroides aproximados, los volvemos a meter en un bucle 
+    para que nos quedemos unicamente con los centroides que tengan correspondencia entre frames
+    """
+    
+    centroides_finales= []
+    
+    for i in range(1,n):#Para ir cogiendo cada fotograma, empezamos en 1 y hacemos correspondencia entre el actual y el anterior
+
+        
+        centroides_fotograma_anterior, centroides_fotograma_actual= cent_correspondencias(centroides_aproximados[i-1], centroides_aproximados[i])
+        
+        centroides_fotograma_anterior= np.array(centroides_fotograma_anterior)
+        centroides_fotograma_actual= np.array(centroides_fotograma_actual)
+        
+        centroides_finales.append(centroides_fotograma_anterior)
+    
+    centroides_finales.append(centroides_fotograma_actual)#Para añadir el ultimo
+        
+    return centroides_finales 
+
+
+restado= leer(r"C:\Users\adelu\OneDrive\Escritorio\FisicaAlicante\Año_V\Gambas_con_Alzheimer\RepositorioApp\videos\22-5-2026-12-7-18_1.mp4")
+
+cents= centroides(restado)
