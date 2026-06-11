@@ -32,7 +32,21 @@ class Camara:
         self.out = self.crear_salida()
         self.preparada = True
         print(f"Cámara {self.indice+1} preparada")
+    
+    def preparar_previsualizacion(self):
+        """Captura un primer frame valido y deja seguir corriendo."""
+        if not self.cap.isOpened():
+            raise RuntimeError(f"No se pudo abrir cámara {self.indice+1}")
 
+        ret, frame = self.cap.read()
+        while not ret:
+            time.sleep(0.05)
+            ret, frame = self.cap.read()
+
+        self.shape = frame.shape
+        self.preparada = True
+        print(f"Cámara {self.indice+1} previsualizando")
+    
     def crear_salida(self):
         h, w, _ = self.shape
         if not os.path.exists('./videos'):
@@ -69,7 +83,7 @@ class Camara:
     def cerrar_salida(self):#Esto sólo cierra la salida y permite crear una nueva
         print('Cerrando vídeo')
         if self.out:
-            self.out.release
+            self.out.release()
         cv2.destroyAllWindows()
 
     def exp_up(self):

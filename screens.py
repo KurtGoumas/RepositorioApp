@@ -234,30 +234,27 @@ class Home(tk.Frame):
         if cam is not None and self.previsualizacion:
             ret, frame = cam.cap.read()
             if ret == True:
-                frame = imutils.resize(frame, width= cam.shape[1])
+                frame = imutils.resize(frame, width= 640)#Redimensionamos para que la previsualizacion se vea bien
                 frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                 im = Image.fromarray(frame)
                 img = ImageTk.PhotoImage(image=im)
                 lblVideo.configure(image=img)
                 lblVideo.image = img
-                lblVideo.after(10, self.visualizar, cam,lblVideo)
+                lblVideo.after(10, self.visualizar, cam,lblVideo)#A lo mejor habria que subir el after a 33
             else:
                 lblVideo.image = ""
                 cam.cap.release()
     
     def previsualizar(self):#Funcion que comandara el boton de previsualizado
 
-        self.cam1.preparar()
-        self.cam2.preparar()
+        self.cam1.preparar_previsualizacion()
+        self.cam2.preparar_previsualizacion()
 
         """
         La forma en la que hemos definido preparar nos crea una salida que luego se queda muerta.
         Es por eso que las voy a borrar manualmente.
         Es un poco sucio pero ya no da la cosa para mas.
         """
-
-        self.cam1.out= None
-        self.cam2.out= None
 
         self.cam1.activar()
         self.cam2.activar()
