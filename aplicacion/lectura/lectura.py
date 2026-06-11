@@ -163,8 +163,3 @@ def centroides(restado): #Le pasamos un video ya restado y procesado
     centroides_finales.append(centroides_fotograma_actual)#Para añadir el ultimo
         
     return centroides_finales 
-
-
-restado= leer(r"C:\Users\adelu\OneDrive\Escritorio\FisicaAlicante\Año_V\Gambas_con_Alzheimer\RepositorioApp\videos\22-5-2026-12-7-18_1.mp4")
-
-cents= centroides(restado)
