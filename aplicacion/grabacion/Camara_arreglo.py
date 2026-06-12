@@ -7,7 +7,9 @@ class Camara:
     def __init__(self, indice):
         self.indice = indice
         self.winname = f'Imagen cámara [{self.indice}]'
-        self.cap = cv2.VideoCapture(self.indice)
+        self.cap = cv2.VideoCapture(self.indice, cv2.CAP_DSHOW)
+        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
+        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
         self.out = None
         self.preparada = False
         self.filename= None
