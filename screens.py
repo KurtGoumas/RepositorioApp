@@ -196,7 +196,7 @@ class Home(tk.Frame):
 
             #Reiniciamos la barra de progreso
 
-            if self._progreso_id is not None:
+            if self.progreso_id is not None:
                 self.after_cancel(self._progreso_id)
                 self._progreso_id = None
 
