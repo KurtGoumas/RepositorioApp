@@ -501,6 +501,8 @@ class Procesado(tk.Frame):
         self.configure(background= style.BACKGROUND)
         self.controller= controller
 
+        self.init_widgets()
+
 
     #Funciones que gestionan el bucle
 
@@ -546,7 +548,7 @@ class Procesado(tk.Frame):
 
         return self.procesado
 
-    def init__widgets(self): #Aqui van los botones y demas 
+    def init_widgets(self): #Aqui van los botones y demas 
 
         posicion= {'Select': [0,0]}
 
@@ -562,7 +564,7 @@ class Procesado(tk.Frame):
 
         #Botones
 
-        boton_inicio= tk.Button(botonesFrame, 
+        boton_procesado= tk.Button(botonesFrame, 
                                 text= 'Seleccionar Vídeos',
                                 command= self.leer_y_procesar_videos, 
                                 activebackground= style.BACKGROUND ,
