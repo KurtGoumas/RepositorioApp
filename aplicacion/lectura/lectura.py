@@ -162,4 +162,91 @@ def centroides(restado): #Le pasamos un video ya restado y procesado
     
     centroides_finales.append(centroides_fotograma_actual)#Para añadir el ultimo
         
-    return centroides_finales 
+    return centroides_finales
+
+@njit(fastmath= True, parallel= True)
+def Union_fotograma(cent_x, cent_y, peso= 1.):
+    """
+    En esta funcion tomamos cada uno de los objetos del mismo fotograma para las dos camaras y los vamos
+    comparando por su coordenada z.
+    
+    cent_x= [objeto:[x,z],...] mientras que cent_y= [objeto:[y,z],...]
+    
+    Si las z son suficientemente parecidas, crea una correspondencia y la añade a cent_xyz de forma que
+    este sera tal que cent_xyz= [objeto:[x,y,z],...]
+    """
+    
+    cent_xyz= []
+    
+    for j in prange(len(cent_x)):
+        
+        for k in range(len(cent_y)):
+            norma= ((cent_x[j][1] - cent_y[k][1])**2)**0.5 #Es como usar abs() pero numba trabaja mejor con opraciones explicitas
+            
+            if norma<=peso:
+                x= cent_x[j][0]
+                y= cent_y[k][0]
+                z= (cent_x[j][1] + cent_y[j][1])/2 #Nos quedamos con z como la media
+                
+                pos_xyz= np.array([x,y,z])
+                cent_xyz.append(pos_xyz)
+                
+        return cent_xyz
+    
+@njit(fastmath= True, parallel= True)
+def cent_correspondencias_3D(cent_primitivo_ant, cent_primitivo_act, peso= 1.):
+    cent_anterior = []
+    cent_actual = []
+    for j in prange(len(cent_primitivo_act)):
+        for k in range(len(cent_primitivo_ant)):
+            norma= ((cent_primitivo_ant[j][0]-cent_primitivo_act[k][0])**2 + (cent_primitivo_ant[j][1]-cent_primitivo_act[k][1])**2 + (cent_primitivo_ant[j][2]-cent_primitivo_act[k][2])**2)**0.5
+            if norma<= peso:
+                cent_anterior.append(cent_primitivo_ant[k])
+                cent_actual.append(cent_primitivo_act[j])
+    return cent_anterior, cent_actual
+    
+def Union_camaras(cent_finales_x, cent_finales_y):
+    
+    """
+    En esta funcion vamos a intentar por fin obtener un array del tipo 
+    
+    cent_finales_xyz= [fotograma:[objeto:[x,y,z],...],...]
+    
+    Asi obtenemos cent_aprox_xyz.
+    
+    Pero todavia podemos depurarlo y hacer algo a lo que hicimos con correspondencias y quedarnos 
+    unicamente con los objetos que prevalecen entre mas de dos fotogramas, necesitaremos la ayuda de un 
+    Correspondencias_3D()
+    """
+    
+    cent_aprox_xyz= []
+    
+    n= len(cent_finales_x) #Damos por hecho que son el mismo numero de fotogramas, habra que cambiarlo luego
+    
+    for i in range(n):
+        
+        cent_xyz= Union_fotograma(cent_finales_x[i], cent_finales_y[i])
+        cent_xyz= np.array(cent_xyz)
+        
+        cent_aprox_xyz.append(cent_xyz)
+    
+    """
+    Aqui ya tenemos el tipo de array que queremos, pero nos falta hacer una correspondencia para tener
+    unicamente objetos que existan de verdad 
+    """
+    
+    cent_finales_xyz= []
+    
+    for i in range(1,n):#Para ir cogiendo cada fotograma, empezamos en 1 y hacemos correspondencia entre el actual y el anterior
+
+        
+        centroides_fotograma_anterior, centroides_fotograma_actual= cent_correspondencias_3D(cent_aprox_xyz[i-1], cent_aprox_xyz[i])
+        
+        centroides_fotograma_anterior= np.array(centroides_fotograma_anterior)
+        centroides_fotograma_actual= np.array(centroides_fotograma_actual)
+        
+        cent_finales_xyz.append(centroides_fotograma_anterior)
+    
+    cent_finales_xyz.append(centroides_fotograma_actual)#Para añadir el ultimo
+
+    return cent_finales_xyz
