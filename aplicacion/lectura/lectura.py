@@ -165,88 +165,157 @@ def centroides(restado): #Le pasamos un video ya restado y procesado
     return centroides_finales
 
 @njit(fastmath= True, parallel= True)
-def Union_fotograma(cent_x, cent_y, peso= 1.):
+def Ordenar_fotograma(cent_x, cent_y, peso= 1.):
     """
     En esta funcion tomamos cada uno de los objetos del mismo fotograma para las dos camaras y los vamos
     comparando por su coordenada z.
     
     cent_x= [objeto:[x,z],...] mientras que cent_y= [objeto:[y,z],...]
     
-    Si las z son suficientemente parecidas, crea una correspondencia y la añade a cent_xyz de forma que
-    este sera tal que cent_xyz= [objeto:[x,y,z],...]
+    Si las z son suficientemente parecidas, crea una correspondencia y la añade a cent_ord_x y cent_ord_y de forma que
+    que el orden de los objetos será el mismo de cara a resolver posteriormente el sistema de ecuaciones para cada uno
     """
     
-    cent_xyz= []
+    cent_ord_x= []
+    cent_ord_y= []
     
     for j in prange(len(cent_x)):
         
         for k in range(len(cent_y)):
-            norma= ((cent_x[j][1] - cent_y[k][1])**2)**0.5 #Es como usar abs() pero numba trabaja mejor con opraciones explicitas
+            norma= abs(cent_x[j][1] - cent_y[k][1])#Si no se traga abs() haces ((resta)**2)**0.5
             
             if norma<=peso:
-                x= cent_x[j][0]
-                y= cent_y[k][0]
-                z= (cent_x[j][1] + cent_y[j][1])/2 #Nos quedamos con z como la media
+                cent_ord_x.append(cent_x[j])
+                cent_ord_y.append(cent_y[k])
+        
+        """
+        Al finalizar todo tenemos otra vez dos arrays de centroides pero sabemos que los indices de cada uno se corresponden
+        con los del otro. Ademas nos hemos desecho de los objetos que no tengan correspondencia entre camaras
+        """
                 
-                pos_xyz= np.array([x,y,z])
-                cent_xyz.append(pos_xyz)
-                
-        return cent_xyz
+        return cent_ord_x, cent_ord_y
+
+def Resolver_Sistema(cent_x, cent_y,xc1, yc1, zc1, xc2, yc2, zc2, Lx, Ly):
+    
+    """
+    En esta funcion cogemos un fotograma y, para cada objeto resolvemos el sistema de ecuaciones y obtenemos su 
+    posicion 3D en el espacio
+    
+    Aqui ya si que cent_x y cent_y deben tener el mismo numero de objetos porque han sido ordenados previamente 
+    """
+    
+    cent_xyz= []
+    
+    n= len(cent_x)
+    
+    for i in range(n):
+        
+        x1= cent_x[i][0]
+        z1= cent_x[i][1]
+        
+        y2= cent_y[i][0]
+        z2= cent_y[i][1]
+        
+        """
+        Resolvemos un sistema tq M*x= N donde M es una matriz 4x3 y N es una matriz 4x1, nuestra solucion es un array 
+        de la forma [x,y,z]
+        """
+        
+        M= np.array([[y2-yc2,xc2-Lx,0],
+            [z2-zc2,0,xc2-Lx],
+            [yc1-Ly,x1-xc1,0],
+            [0,z1-zc1,yc1-Ly]])#Si hay algun problema, a lo mejor es en esta matriz
+        
+        N= np.array([xc2*y2 - Lx*yc2, xc2*z1 - Lx*zc2, yc1*x1 - Ly*xc1, yc1*z1 - Ly*zc1])
+        
+        sol= np.linalg.solve(M,N)
+        
+        cent_xyz.append(sol)
+    
+    return cent_xyz
+    
     
 @njit(fastmath= True, parallel= True)
 def cent_correspondencias_3D(cent_primitivo_ant, cent_primitivo_act, peso= 1.):
     cent_anterior = []
     cent_actual = []
     for j in prange(len(cent_primitivo_act)):
+        minNorm = 100000
+        minIndex = -1
         for k in range(len(cent_primitivo_ant)):
             norma= ((cent_primitivo_ant[j][0]-cent_primitivo_act[k][0])**2 + (cent_primitivo_ant[j][1]-cent_primitivo_act[k][1])**2 + (cent_primitivo_ant[j][2]-cent_primitivo_act[k][2])**2)**0.5
-            if norma<= peso:
-                cent_anterior.append(cent_primitivo_ant[k])
-                cent_actual.append(cent_primitivo_act[j])
+            if norma < minNorm:
+                minIndex = k
+                minNorm = norma
+        cent_anterior.append(cent_primitivo_ant[minIndex])
+        cent_actual.append(cent_primitivo_act[j])
     return cent_anterior, cent_actual
     
-def Union_camaras(cent_finales_x, cent_finales_y):
+def Union_camaras(cent_finales_x, cent_finales_y, peso=1, xc1= 0.5, yc1= 1.5, zc1= 0.5 , xc2= 1.5, yc2= 0.5, zc2= 0.5, Lx= 1, Ly= 1):
     
     """
     En esta funcion vamos a intentar por fin obtener un array del tipo 
     
     cent_finales_xyz= [fotograma:[objeto:[x,y,z],...],...]
     
-    Asi obtenemos cent_aprox_xyz.
-    
-    Pero todavia podemos depurarlo y hacer algo a lo que hicimos con correspondencias y quedarnos 
-    unicamente con los objetos que prevalecen entre mas de dos fotogramas, necesitaremos la ayuda de un 
-    Correspondencias_3D()
+    Primero ordenamos los centroides de cada fotograma de cara a resolver el sistema de ecuaciones
     """
     
-    cent_aprox_xyz= []
+    cent_ord_x= []
+    cent_ord_y= []
     
     n= len(cent_finales_x) #Damos por hecho que son el mismo numero de fotogramas, habra que cambiarlo luego
     
     for i in range(n):
         
-        cent_xyz= Union_fotograma(cent_finales_x[i], cent_finales_y[i])
-        cent_xyz= np.array(cent_xyz)
+        cent_x, cent_y= Ordenar_fotograma(cent_finales_x[i], cent_finales_y[i],peso)
         
-        cent_aprox_xyz.append(cent_xyz)
+        cent_ord_x.append(cent_x)
+        cent_ord_y.append(cent_y)
     
     """
-    Aqui ya tenemos el tipo de array que queremos, pero nos falta hacer una correspondencia para tener
-    unicamente objetos que existan de verdad 
+    Aqui tenemos dos arrays tal que,
+    
+        camara 1: [fotogrma_1:[Objeto_1: [x,z],... ],...]
+        camara 2: [fotogrma_1:[Objeto_1: [y,z],... ],...]
+        
+    Aunque el obejto 1 del fotograma 1 es el mismo para ambas camaras, el objeto 1 del fotograma 1 no es el mismo que el 
+    objeto 1 del fotograma 2 para una misma camara, pero esto nos da igual. 
+        
+    Ahora vamos a resolver el sistema para cada objeto en cada fotograma y al fin obtendremos un array del tipo
+    
+    cent_xyz= [fotograma:[objeto:[x,y,z],...],...]
     """
     
-    cent_finales_xyz= []
+    cent_xyz= []
+    
+    for i in range(n):
+        
+        posicion= Resolver_Sistema(cent_ord_x, cent_ord_y, xc1, yc1, zc1, xc2, yc2, zc2, Lx, Ly)
+        cent_xyz.append(posicion)
+    
+    """
+    Finalmente aqui tenemos el objeto que buscabamos, la unica cosa es que los objetos no estan ordenados entre fotogrmas 
+    lo que nos queda por hacer es separar sus trayectorias y arrays del tipo [objeto:[fotograma:[x,y,z], ...], ...]
+    
+    Lo primero que haremos sera ordenarlos, asi el objeto 1 del fotograma 1 estara correspondido con el objeto 1 del 
+    fotograma 2. Y luego ya solo queda trasponer la matriz
+    """
+    
+    cent_finales_ordenados= []
     
     for i in range(1,n):#Para ir cogiendo cada fotograma, empezamos en 1 y hacemos correspondencia entre el actual y el anterior
-
         
-        centroides_fotograma_anterior, centroides_fotograma_actual= cent_correspondencias_3D(cent_aprox_xyz[i-1], cent_aprox_xyz[i])
+        centroides_fotograma_anterior, centroides_fotograma_actual= cent_correspondencias_3D(cent_xyz[i-1], cent_xyz[i])
         
         centroides_fotograma_anterior= np.array(centroides_fotograma_anterior)
         centroides_fotograma_actual= np.array(centroides_fotograma_actual)
         
-        cent_finales_xyz.append(centroides_fotograma_anterior)
+        cent_finales_ordenados.append(centroides_fotograma_anterior)
     
-    cent_finales_xyz.append(centroides_fotograma_actual)#Para añadir el ultimo
+    cent_finales_ordenados.append(centroides_fotograma_actual)#Para añadir el ultimo
+    cent_finales_ordenados= np.array(cent_finales_ordenados)
+    
+    cent_finales= cent_finales_ordenados.T
 
-    return cent_finales_xyz
+    return cent_finales
