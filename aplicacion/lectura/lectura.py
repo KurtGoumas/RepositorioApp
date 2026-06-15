@@ -234,7 +234,7 @@ def Resolver_Sistema(cent_x, cent_y,xc1, yc1, zc1, xc2, yc2, zc2, Lx, Ly):
     
     return cent_xyz
     
-    
+""" 
 @njit(fastmath= True, parallel= True)
 def cent_correspondencias_3D(cent_primitivo_ant, cent_primitivo_act, peso= 1.):
     cent_anterior = []
@@ -250,8 +250,44 @@ def cent_correspondencias_3D(cent_primitivo_ant, cent_primitivo_act, peso= 1.):
         cent_anterior.append(cent_primitivo_ant[minIndex])
         cent_actual.append(cent_primitivo_act[j])
     return cent_anterior, cent_actual
+"""
+
+@njit(fastmath= True, parallel= True)
+def Ordenar_3D(cent_xyz, N_objetos, peso):#N_objetos es el numero de objetos que espera el usuario
+
+    """
+    Esta funcion toma el tipo de objeto que tenemos y lo convierte en un tipo 
+    [objeto:[fotograma:[x,y,z], ...], ...]
+    """
     
-def Union_camaras(cent_finales_x, cent_finales_y, peso=1, xc1= 0.5, yc1= 1.5, zc1= 0.5 , xc2= 1.5, yc2= 0.5, zc2= 0.5, Lx= 1, Ly= 1):
+    Nf= len(cent_xyz)
+    
+    Ordenado= np.zeros((N_objetos,Nf,3))
+    Ordenado[:,0:,]= cent_xyz[0]#Rellenamos con posiciones el primer fotograma
+    
+    for f in range(1, Nf):
+        n0= len(cent_xyz[f])#Numero de objetos del fotograma a tratar
+        
+        for i in range(N_objetos):#Anterior
+            
+            minNorm= 1000000
+            candidato= False #Por si no encontramos ninguno
+            
+            for j in range(n0):#Actual
+                
+                norma= ((Ordenado[i][f-1][0]-cent_xyz[f][j][0])**2 + (Ordenado[i][f-1][1]-cent_xyz[f][j][1])**2 + (Ordenado[i][f-1][2]-cent_xyz[f][j][2])**2)**0.5
+                
+                if norma<= peso and norma<= minNorm:
+                    Ordenado[i][f]= cent_xyz[f][j]
+                    minNorm= norma
+                    candidato= True
+                
+                if not candidato:
+                    Ordenado[i][f]= Ordenado[i][f-1]#Si no encontramos correspondencia porque la gamba se ha escondido, rellenamos con el anterior
+                    
+    return Ordenado
+    
+def Union_camaras(cent_finales_x, cent_finales_y, N_objetos, peso=1, xc1= 0.5, yc1= 1.5, zc1= 0.5 , xc2= 1.5, yc2= 0.5, zc2= 0.5, Lx= 1, Ly= 1):
     
     """
     En esta funcion vamos a intentar por fin obtener un array del tipo 
@@ -302,6 +338,7 @@ def Union_camaras(cent_finales_x, cent_finales_y, peso=1, xc1= 0.5, yc1= 1.5, zc
     fotograma 2. Y luego ya solo queda trasponer la matriz
     """
     
+    """
     cent_finales_ordenados= []
     
     for i in range(1,n):#Para ir cogiendo cada fotograma, empezamos en 1 y hacemos correspondencia entre el actual y el anterior
@@ -317,5 +354,8 @@ def Union_camaras(cent_finales_x, cent_finales_y, peso=1, xc1= 0.5, yc1= 1.5, zc
     cent_finales_ordenados= np.array(cent_finales_ordenados)
     
     cent_finales= cent_finales_ordenados.T
+    """
+    
+    cent_finales= Ordenar_3D(cent_xyz, N_objetos, peso)
 
     return cent_finales
