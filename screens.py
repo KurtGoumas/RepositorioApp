@@ -665,7 +665,7 @@ class Procesado(tk.Frame):
         ).grid(row=posicion['N Objetos'][0],column=posicion['N Objetos'][1])
 
         texto_peso= tk.Label(etiquetasFrame,
-                            text='Peso del Movimiento: ',
+                            text='Peso del Movimiento (0-1): ',
                             **style.STYLE
                               
         ).grid(row=posicion['Peso Mov'][0],column=posicion['Peso Mov'][1])
