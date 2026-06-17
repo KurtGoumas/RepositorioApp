@@ -14,10 +14,10 @@ from aplicacion.grabacion.control import *
 from aplicacion.lectura import lectura
 
 """
-En la pantalla de Home tendremos que indicar el tiempo 
-de grabacion y los intervalos, despues le daremos
-al boton de incicio y pasaremos a la pantalla de 
-monitorizacion.
+En la pantalla de Home podremos previsualizar y grabar.
+
+En la pantalla de procesado tomaremos videos ya grabados y los usaremos para obtener lo
+que necesitemos.
 """
 
 class CamThread(Thread):
@@ -501,6 +501,26 @@ class Procesado(tk.Frame):
         self.configure(background= style.BACKGROUND)
         self.controller= controller
 
+        #Todos los valores de la configuracion del dispositivo experimental
+
+        self.xc1= tk.DoubleVar(self, value= '0.5')
+        self.yc1= tk.DoubleVar(self, value= '1.5')
+        self.zc1= tk.DoubleVar(self, value= '0.5')
+
+        self.xc2= tk.DoubleVar(self, value= '1.5')
+        self.yc2= tk.DoubleVar(self, value= '0.5')
+        self.zc2= tk.DoubleVar(self, value= '0.5')
+
+        self.Lx= tk.DoubleVar(self, value= '1')
+        self.Ly= tk.DoubleVar(self, value= '1')
+
+        self.N_Objetos= tk.IntVar(self, value= '10')
+
+        self.peso_mov= tk.DoubleVar(self, value= '1')
+
+        self.text_entry_width = 10
+
+        #Para poder introducir todos los widgets
         self.init_widgets()
 
 
@@ -550,7 +570,7 @@ class Procesado(tk.Frame):
 
     def init_widgets(self): #Aqui van los botones y demas 
 
-        posicion= {'Select': [0,0]}
+        posicion= {'Select': [0,0], 'Titulo param': [0,0], 'Camara 1': [1,0], 'Camara 2': [2,0], 'N Objetos': [3,0], 'Peso Mov': [4,0], 'Lx': [3,2], 'Ly': [4,2]}
 
         #Vamos a hacer un frame en el que poner los botones para empezar
 
@@ -571,7 +591,139 @@ class Procesado(tk.Frame):
                                 activeforeground= style.TEXT,
                                 **style.STYLE
                                 ).grid(row=posicion['Select'][0], column=posicion['Select'][1])
+        
 
+        #Vamos a poner un espacio para esos valores que tendran que ser añadidos por el usuario
+        etiquetasFrame= tk.Frame(self)
+        etiquetasFrame.configure(background= style.COMPONENT)
+        etiquetasFrame.pack(
+            side= tk.BOTTOM,
+            fill= tk.BOTH,
+            expand= True,
+        )
 
+        #Textos y estiquetas no interactuables
 
+        texto_parametros_titulo= tk.Label(etiquetasFrame,
+                            text='Parámetros de Configuración del Experimento',
+                            **style.STYLE
+                              
+        ).grid(row=posicion['Titulo param'][0],column=posicion['Titulo param'][1])
 
+        texto_Camara_1= tk.Label(etiquetasFrame,
+                            text='Cámara 1: ',
+                            **style.STYLE
+                              
+        ).grid(row=posicion['Camara 1'][0],column=posicion['Camara 1'][1])
+
+        texto_xc1= tk.Label(etiquetasFrame,
+                            text='x= ',
+                            **style.STYLE
+                              
+        ).grid(row=posicion['Camara 1'][0],column=posicion['Camara 1'][1]+1)
+
+        texto_yc1= tk.Label(etiquetasFrame,
+                            text=', y= ',
+                            **style.STYLE
+                              
+        ).grid(row=posicion['Camara 1'][0],column=posicion['Camara 1'][1]+3)
+
+        texto_zc1= tk.Label(etiquetasFrame,
+                            text=', z= ',
+                            **style.STYLE
+                              
+        ).grid(row=posicion['Camara 1'][0],column=posicion['Camara 1'][1]+5)
+
+        texto_Camara_2= tk.Label(etiquetasFrame,
+                            text='Camara 2: ',
+                            **style.STYLE
+                              
+        ).grid(row=posicion['Camara 2'][0],column=posicion['Camara 2'][1])
+
+        texto_xc2= tk.Label(etiquetasFrame,
+                            text='x= ',
+                            **style.STYLE
+                              
+        ).grid(row=posicion['Camara 2'][0],column=posicion['Camara 2'][1]+1)
+
+        texto_yc2= tk.Label(etiquetasFrame,
+                            text=', y= ',
+                            **style.STYLE
+                              
+        ).grid(row=posicion['Camara 2'][0],column=posicion['Camara 2'][1]+3)
+
+        texto_zc2= tk.Label(etiquetasFrame,
+                            text=', z= ',
+                            **style.STYLE
+                              
+        ).grid(row=posicion['Camara 2'][0],column=posicion['Camara 2'][1]+5)
+
+        texto_N_obj= tk.Label(etiquetasFrame,
+                            text='Número de Objetos: ',
+                            **style.STYLE
+                              
+        ).grid(row=posicion['N objetos'][0],column=posicion['N objetos'][1])
+
+        texto_peso= tk.Label(etiquetasFrame,
+                            text='Peso del Movimiento: ',
+                            **style.STYLE
+                              
+        ).grid(row=posicion['Peso mov'][0],column=posicion['Peso mov'][1])
+
+        texto_Lx= tk.Label(etiquetasFrame,
+                            text='Lx: ',
+                            **style.STYLE
+                              
+        ).grid(row=posicion['Lx'][0],column=posicion['Lx'][1])
+
+        texto_Ly= tk.Label(etiquetasFrame,
+                            text='Ly: ',
+                            **style.STYLE
+                              
+        ).grid(row=posicion['Camara 2'][0],column=posicion['Camara 2'][1])
+
+        #Aqui van las entradas de los valores
+
+        xc1= tk.Entry(etiquetasFrame,
+                          **style.STYLE,
+                          textvariable= self.xc1,
+                          width = self.text_entry_width
+
+        ).grid(row= posicion['Camara 1'][0], column= posicion['Camara 1'][1]+2)
+
+        yc1= tk.Entry(etiquetasFrame,
+                          **style.STYLE,
+                          textvariable= self.yc1,
+                          width = self.text_entry_width
+
+        ).grid(row= posicion['Camara 1'][0], column= posicion['Camara 1'][1]+4)
+
+        zc1= tk.Entry(etiquetasFrame,
+                          **style.STYLE,
+                          textvariable= self.zc1,
+                          width = self.text_entry_width
+
+        ).grid(row= posicion['Camara 1'][0], column= posicion['Camara 1'][1]+6)
+
+        xc2= tk.Entry(etiquetasFrame,
+                          **style.STYLE,
+                          textvariable= self.xc2,
+                          width = self.text_entry_width
+
+        ).grid(row= posicion['Camara 2'][0], column= posicion['Camara 2'][1]+2)
+
+        yc2= tk.Entry(etiquetasFrame,
+                          **style.STYLE,
+                          textvariable= self.yc2,
+                          width = self.text_entry_width
+
+        ).grid(row= posicion['Camara 2'][0], column= posicion['Camara 2'][1]+4)
+
+        zc2= tk.Entry(etiquetasFrame,
+                          **style.STYLE,
+                          textvariable= self.zc2,
+                          width = self.text_entry_width
+
+        ).grid(row= posicion['Camara 2'][0], column= posicion['Camara 2'][1]+6)
+
+    

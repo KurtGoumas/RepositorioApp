@@ -287,7 +287,7 @@ def Ordenar_3D(cent_xyz, N_objetos, peso):#N_objetos es el numero de objetos que
                     
     return Ordenado
     
-def Union_camaras(cent_finales_x, cent_finales_y, N_objetos, peso=1, xc1= 0.5, yc1= 1.5, zc1= 0.5 , xc2= 1.5, yc2= 0.5, zc2= 0.5, Lx= 1, Ly= 1):
+def Union_camaras(cent_finales_x, cent_finales_y, N_objetos= 10, peso=1, xc1= 0.5, yc1= 1.5, zc1= 0.5 , xc2= 1.5, yc2= 0.5, zc2= 0.5, Lx= 1, Ly= 1):
     
     """
     En esta funcion vamos a intentar por fin obtener un array del tipo 
