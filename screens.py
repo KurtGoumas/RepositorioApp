@@ -662,13 +662,13 @@ class Procesado(tk.Frame):
                             text='Número de Objetos: ',
                             **style.STYLE
                               
-        ).grid(row=posicion['N objetos'][0],column=posicion['N objetos'][1])
+        ).grid(row=posicion['N Objetos'][0],column=posicion['N Objetos'][1])
 
         texto_peso= tk.Label(etiquetasFrame,
                             text='Peso del Movimiento: ',
                             **style.STYLE
                               
-        ).grid(row=posicion['Peso mov'][0],column=posicion['Peso mov'][1])
+        ).grid(row=posicion['Peso Mov'][0],column=posicion['Peso Mov'][1])
 
         texto_Lx= tk.Label(etiquetasFrame,
                             text='Lx: ',
@@ -680,7 +680,7 @@ class Procesado(tk.Frame):
                             text='Ly: ',
                             **style.STYLE
                               
-        ).grid(row=posicion['Camara 2'][0],column=posicion['Camara 2'][1])
+        ).grid(row=posicion['Ly'][0],column=posicion['Ly'][1])
 
         #Aqui van las entradas de los valores
 
@@ -725,5 +725,33 @@ class Procesado(tk.Frame):
                           width = self.text_entry_width
 
         ).grid(row= posicion['Camara 2'][0], column= posicion['Camara 2'][1]+6)
+
+        N_Objetos= tk.Entry(etiquetasFrame,
+                          **style.STYLE,
+                          textvariable= self.N_Objetos,
+                          width = self.text_entry_width
+
+        ).grid(row= posicion['N Objetos'][0], column= posicion['N Objetos'][1]+1)
+
+        self.peso_mov= tk.Entry(etiquetasFrame,
+                          **style.STYLE,
+                          textvariable= self.peso_mov,
+                          width = self.text_entry_width
+
+        ).grid(row= posicion['Peso Mov'][0], column= posicion['Peso Mov'][1]+1)
+
+        Lx= tk.Entry(etiquetasFrame,
+                          **style.STYLE,
+                          textvariable= self.Lx,
+                          width = self.text_entry_width
+
+        ).grid(row= posicion['Lx'][0], column= posicion['Lx'][1]+1)
+
+        Ly= tk.Entry(etiquetasFrame,
+                          **style.STYLE,
+                          textvariable= self.Ly,
+                          width = self.text_entry_width
+
+        ).grid(row= posicion['Ly'][0], column= posicion['Ly'][1]+1)
 
     
