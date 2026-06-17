@@ -79,7 +79,7 @@ def cent_correspondencias(cent_primitivo_ant, cent_primitivo_act, peso= 1.):
     cent_actual = []
     for j in prange(len(cent_primitivo_act)):
         for k in range(len(cent_primitivo_ant)):
-            norma= ((cent_primitivo_ant[j][0]-cent_primitivo_act[k][0])**2 + (cent_primitivo_ant[j][1]-cent_primitivo_act[k][1])**2)**0.5
+            norma= ((cent_primitivo_ant[k][0]-cent_primitivo_act[j][0])**2 + (cent_primitivo_ant[k][1]-cent_primitivo_act[j][1])**2)**0.5
             if norma<= peso:
                 cent_anterior.append(cent_primitivo_ant[k])
                 cent_actual.append(cent_primitivo_act[j])
@@ -129,6 +129,7 @@ def centroides(restado): #Le pasamos un video ya restado y procesado
         """
         
         stats_bien= stats[1:]#Hemos quitado la primera fila que es el fondo
+        centroides_bien= centroids[1:]
         areas= stats_bien[:,4]#Tomamos el cuarto objeto que son las areas de todo lo que identifica
         
         centroides_fotograma= [] #Aqui meteremos todos los centroides posiblemente validos
@@ -136,7 +137,7 @@ def centroides(restado): #Le pasamos un video ya restado y procesado
         
             if areas[i]>= area_valida or areas[i]==max(areas):#Para al menos asegurarnos de pillar un centroide, la gamba deberia ser el mayor
                 
-                centroides_fotograma.append(centroids[i])
+                centroides_fotograma.append(centroides_bien[i])
                 
         centroides_fotograma= np.array(centroides_fotograma)#Lo transformamos en array
         
@@ -193,15 +194,18 @@ def Ordenar_fotograma(cent_x, cent_y, peso= 1.):
         con los del otro. Ademas nos hemos desecho de los objetos que no tengan correspondencia entre camaras
         """
                 
-        return cent_ord_x, cent_ord_y
+    return cent_ord_x, cent_ord_y
 
-def Resolver_Sistema(cent_x, cent_y,xc1, yc1, zc1, xc2, yc2, zc2, Lx, Ly):
+def Resolver_Sistema(cent_x, cent_y,xc1, yc1, zc1, xc2, yc2, zc2, Lx, Ly, w= 600, h= 800):#w y h son los pixeles que mide la camara de ancho y alto
     
     """
-    En esta funcion cogemos un fotograma y, para cada objeto resolvemos el sistema de ecuaciones y obtenemos su 
-    posicion 3D en el espacio
+    En esta funcion cogemos un fotograma y, para cada objeto resolvemos el sistema 
+    de ecuaciones y obtenemos su posicion 3D en el espacio
     
-    Aqui ya si que cent_x y cent_y deben tener el mismo numero de objetos porque han sido ordenados previamente 
+    Aqui ya si que cent_x y cent_y deben tener el mismo numero 
+    de objetos porque han sido ordenados previamente 
+
+    w y h tienen que ser modificados con cada nuevo corte que elijamos, ya veremos como pulir eso
     """
     
     cent_xyz= []
@@ -210,15 +214,18 @@ def Resolver_Sistema(cent_x, cent_y,xc1, yc1, zc1, xc2, yc2, zc2, Lx, Ly):
     
     for i in range(n):
         
-        x1= cent_x[i][0]
-        z1= cent_x[i][1]
+        x1= cent_x[i][0]/w
+        z1= cent_x[i][1]/h
         
-        y2= cent_y[i][0]
-        z2= cent_y[i][1]
+        y2= cent_y[i][0]/w
+        z2= cent_y[i][1]/h
         
         """
         Resolvemos un sistema tq M*x= N donde M es una matriz 4x3 y N es una matriz 4x1, nuestra solucion es un array 
         de la forma [x,y,z]
+
+        Hemos divido entre el ancho (w) y el alto (h) para tener valores adimensionales entre 0 y 1 
+        siendo que Lx y Ly valen 1 precisamente por eso.
         """
         
         M= np.array([[y2-yc2,xc2-Lx,0],
@@ -226,9 +233,9 @@ def Resolver_Sistema(cent_x, cent_y,xc1, yc1, zc1, xc2, yc2, zc2, Lx, Ly):
             [yc1-Ly,x1-xc1,0],
             [0,z1-zc1,yc1-Ly]])#Si hay algun problema, a lo mejor es en esta matriz
         
-        N= np.array([xc2*y2 - Lx*yc2, xc2*z1 - Lx*zc2, yc1*x1 - Ly*xc1, yc1*z1 - Ly*zc1])
+        N= np.array([xc2*y2 - Lx*yc2, xc2*z2 - Lx*zc2, yc1*x1 - Ly*xc1, yc1*z1 - Ly*zc1])
         
-        sol= np.linalg.solve(M,N)
+        sol= np.linalg.lstsq(M,N)[0]#La que importa es la cero, el resto son otras cosas
         
         cent_xyz.append(sol)
     
@@ -327,7 +334,7 @@ def Union_camaras(cent_finales_x, cent_finales_y, N_objetos= 10, peso=1, xc1= 0.
     
     for i in range(n):
         
-        posicion= Resolver_Sistema(cent_ord_x, cent_ord_y, xc1, yc1, zc1, xc2, yc2, zc2, Lx, Ly)
+        posicion= Resolver_Sistema(cent_ord_x[i], cent_ord_y[i], xc1, yc1, zc1, xc2, yc2, zc2, Lx, Ly)
         cent_xyz.append(posicion)
     
     """
