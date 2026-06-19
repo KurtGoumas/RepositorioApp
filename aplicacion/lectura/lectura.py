@@ -196,7 +196,7 @@ def Ordenar_fotograma(cent_x, cent_y, peso= 1.):
                 
     return cent_ord_x, cent_ord_y
 
-def Resolver_Sistema(cent_x, cent_y,xc1, yc1, zc1, xc2, yc2, zc2, Lx, Ly, w= 600, h= 800):#w y h son los pixeles que mide la camara de ancho y alto
+def Resolver_Sistema(cent_x, cent_y,xc1, yc1, zc1, xc2, yc2, zc2, Lx, Ly, w= 800, h= 1300):#w y h son los pixeles que mide la camara de ancho y alto
     
     """
     En esta funcion cogemos un fotograma y, para cada objeto resolvemos el sistema 
@@ -235,29 +235,11 @@ def Resolver_Sistema(cent_x, cent_y,xc1, yc1, zc1, xc2, yc2, zc2, Lx, Ly, w= 600
         
         N= np.array([xc2*y2 - Lx*yc2, xc2*z2 - Lx*zc2, yc1*x1 - Ly*xc1, yc1*z1 - Ly*zc1])
         
-        sol= np.linalg.lstsq(M,N)[0]#La que importa es la cero, el resto son otras cosas
+        sol= scp.linalg.lstsq(M,N)[0]#La que importa es la cero, el resto son otras cosas
         
         cent_xyz.append(sol)
     
     return cent_xyz
-    
-""" 
-@njit(fastmath= True, parallel= True)
-def cent_correspondencias_3D(cent_primitivo_ant, cent_primitivo_act, peso= 1.):
-    cent_anterior = []
-    cent_actual = []
-    for j in prange(len(cent_primitivo_act)):
-        minNorm = 100000
-        minIndex = -1
-        for k in range(len(cent_primitivo_ant)):
-            norma= ((cent_primitivo_ant[j][0]-cent_primitivo_act[k][0])**2 + (cent_primitivo_ant[j][1]-cent_primitivo_act[k][1])**2 + (cent_primitivo_ant[j][2]-cent_primitivo_act[k][2])**2)**0.5
-            if norma < minNorm:
-                minIndex = k
-                minNorm = norma
-        cent_anterior.append(cent_primitivo_ant[minIndex])
-        cent_actual.append(cent_primitivo_act[j])
-    return cent_anterior, cent_actual
-"""
 
 @njit(fastmath= True, parallel= True)
 def Ordenar_3D(cent_xyz, N_objetos, peso):#N_objetos es el numero de objetos que espera el usuario
@@ -336,32 +318,6 @@ def Union_camaras(cent_finales_x, cent_finales_y, N_objetos= 10, peso=1, xc1= 0.
         
         posicion= Resolver_Sistema(cent_ord_x[i], cent_ord_y[i], xc1, yc1, zc1, xc2, yc2, zc2, Lx, Ly)
         cent_xyz.append(posicion)
-    
-    """
-    Finalmente aqui tenemos el objeto que buscabamos, la unica cosa es que los objetos no estan ordenados entre fotogrmas 
-    lo que nos queda por hacer es separar sus trayectorias y arrays del tipo [objeto:[fotograma:[x,y,z], ...], ...]
-    
-    Lo primero que haremos sera ordenarlos, asi el objeto 1 del fotograma 1 estara correspondido con el objeto 1 del 
-    fotograma 2. Y luego ya solo queda trasponer la matriz
-    """
-    
-    """
-    cent_finales_ordenados= []
-    
-    for i in range(1,n):#Para ir cogiendo cada fotograma, empezamos en 1 y hacemos correspondencia entre el actual y el anterior
-        
-        centroides_fotograma_anterior, centroides_fotograma_actual= cent_correspondencias_3D(cent_xyz[i-1], cent_xyz[i])
-        
-        centroides_fotograma_anterior= np.array(centroides_fotograma_anterior)
-        centroides_fotograma_actual= np.array(centroides_fotograma_actual)
-        
-        cent_finales_ordenados.append(centroides_fotograma_anterior)
-    
-    cent_finales_ordenados.append(centroides_fotograma_actual)#Para añadir el ultimo
-    cent_finales_ordenados= np.array(cent_finales_ordenados)
-    
-    cent_finales= cent_finales_ordenados.T
-    """
     
     cent_finales= Ordenar_3D(cent_xyz, N_objetos, peso)
 
