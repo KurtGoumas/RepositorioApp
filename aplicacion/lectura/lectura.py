@@ -360,8 +360,11 @@ def Tiempos_csv(Nombre):
 
 def Escribir_Posiciones_Tiempos(Nombre, pos, t):
     
+    Nombre_cortado= Nombre.split('_')[0]#Asi nos quedamos solo con la fecha en qeu fue grabado el video
+    Nombre_nuevo= Nombre_cortado + '_Trayectoria'
+
     dataframe= pd.DataFrame({'Posicion': pos, 'Tiempo': t})
-    dataframe.to_csv(Nombre + '.csv', sep= '\t', index= False)
+    dataframe.to_csv(Nombre_nuevo + '.csv', sep= '\t', index= False)
 
     return True
 
@@ -373,12 +376,12 @@ def Guardar_trayectorias(cent_finales, filename_c1, filename_c2):
 
     Los tiempos son sacados de los archivos de metadatos correspondientes a videos de la camara 1 y camara 2
 
-    Importante, los nombre de lso archivos que entran aqui es sin la extension, para asi poder 
+    Importante, los nombre de los archivos que entran aqui es sin la extension, para asi poder 
     tratarlos para nombrar nuevos archivos
     """
 
-    t1= gestion.Tiempos_csv(filename_c1)
-    t2= gestion.Tiempos_csv(filename_c2)
+    t1= Tiempos_csv(filename_c1)
+    t2= Tiempos_csv(filename_c2)
 
     """
     t1 y t2 son dos arrays de tiempos que no tienen que ser iguales asi que tendremos que hacer lo 
@@ -398,13 +401,13 @@ def Guardar_trayectorias(cent_finales, filename_c1, filename_c2):
 
     posiciones= cent_finales#Y este nuestro array de posiciones
 
-    posiciones_y_tiempos= gestion.Escribir_Posiciones_Tiempos(filename_c1, posiciones, t)
+    posiciones_y_tiempos= Escribir_Posiciones_Tiempos(filename_c1, posiciones, t)
 
     """
     No se con cual de los tiempos quedarme o que hacer, pero esto es lo que puedo hacer hasta ahora
     """
 
-    return posiciones, t1, t2
+    return posiciones, t
 
 
 
