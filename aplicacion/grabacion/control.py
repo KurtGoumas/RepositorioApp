@@ -3,6 +3,7 @@ import time
 import datetime as dt
 import csv
 import os
+import pandas as pd
 
 def listar_indices(max= 2):
     l = [i for i in range(max) if cv2.VideoCapture(i).isOpened() and cv2.VideoCapture(i).release() is None]
@@ -49,7 +50,7 @@ def MetadatosIteracion(Nombre,camara,hilo):
 
     existe= os.path.exists(Nombre + '.csv')
     with open(Nombre + '.csv', 'a', newline='') as file:
-        formato = csv.writer(file, delimiter = ' ',dialect='excel' ,quoting=csv.QUOTE_NONE, escapechar= '\\')
+        formato = csv.writer(file, delimiter = '\t',dialect='excel' ,quoting=csv.QUOTE_NONE, escapechar= '\\')
         if not existe:
             formato.writerow(['Fotograma', 'Hora-Minuto-Segundo','Tiempo', 'fps','Exposición','Ganancia', 'Bitrate','WB'])
         lista= [f'{hilo.Contador_Frames}', 
@@ -58,3 +59,6 @@ def MetadatosIteracion(Nombre,camara,hilo):
                 f'{hilo.fps_real}', f'{camara.exposicion}', f'{camara.ganancia}', f'{camara.cap.get(cv2.CAP_PROP_BITRATE)}', 'WB']
         formato.writerow(lista)
     return True
+
+
+

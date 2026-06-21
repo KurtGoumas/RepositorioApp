@@ -8,6 +8,10 @@ from numba.typed import List
 from matplotlib import cm
 from matplotlib.ticker import LinearLocator
 
+import csv
+import os
+import pandas as pd
+
 '''
 En este script crearemos las funciones que estan realcionadas con la lectura de videos o de
 carpetas con videos. 
@@ -285,11 +289,25 @@ def Union_camaras(cent_finales_x, cent_finales_y, N_objetos= 10, peso=1, xc1= 0.
     
     Primero ordenamos los centroides de cada fotograma de cara a resolver el sistema de ecuaciones
     """
+
+    """
+    Eso si, antes que nada, ponemos a la par los arrays de centroides y lo que vamos a hacer es 
+    descartar los n primeros fotogramas del que mas tenga porque parece que el problema es que 
+    arranca antes y tiene algunos fotogramas de sobra
+    """
+
+    diferencia= len(cent_finales_x)-len(cent_finales_y)
+
+    if diferencia>0:
+        cent_finales_x= cent_finales_x[diferencia:]
+    
+    elif diferencia<0:
+        cent_finales_y= cent_finales_y[abs(diferencia):]
     
     cent_ord_x= []
     cent_ord_y= []
     
-    n= len(cent_finales_x) #Damos por hecho que son el mismo numero de fotogramas, habra que cambiarlo luego
+    n= len(cent_finales_x) #Damos por hecho que son el mismo numero de fotogramas ya que nos hemos asegurado de ello
     
     for i in range(n):
         
@@ -322,3 +340,71 @@ def Union_camaras(cent_finales_x, cent_finales_y, N_objetos= 10, peso=1, xc1= 0.
     cent_finales= Ordenar_3D(cent_xyz, N_objetos, peso)
 
     return cent_finales
+
+
+"""
+Aqui van las funciones dedicadas a guardar las trayectorias
+"""
+
+def Tiempos_csv(Nombre):
+    """
+    Esta funcion es la que invocaremos en lectura para que tome el csv con los tiempos y lo
+    convierta en un array
+    """
+
+    dataframe= pd.read_csv(Nombre + '.csv', sep= '\t', usecols= ['Tiempo'])
+
+    t= dataframe['Tiempo'].to_numpy()
+
+    return t
+
+def Escribir_Posiciones_Tiempos(Nombre, pos, t):
+    
+    dataframe= pd.DataFrame({'Posicion': pos, 'Tiempo': t})
+    dataframe.to_csv(Nombre + '.csv', sep= '\t', index= False)
+
+    return True
+
+def Guardar_trayectorias(cent_finales, filename_c1, filename_c2):
+
+    """
+    Esta funcion toma los centroides cuando ya estan listos para el calculo de las treayectorias
+    y los guarda en un archivo de metadatos junto con los tiempos.
+
+    Los tiempos son sacados de los archivos de metadatos correspondientes a videos de la camara 1 y camara 2
+
+    Importante, los nombre de lso archivos que entran aqui es sin la extension, para asi poder 
+    tratarlos para nombrar nuevos archivos
+    """
+
+    t1= gestion.Tiempos_csv(filename_c1)
+    t2= gestion.Tiempos_csv(filename_c2)
+
+    """
+    t1 y t2 son dos arrays de tiempos que no tienen que ser iguales asi que tendremos que hacer lo 
+    mismo que con los centroides de Union_camaras y luego nos quedaremos con un t que sera la 
+    media de ambos 
+    """
+
+    diferencia_t= len(t1)-len(t2)
+    
+    if diferencia_t>0:
+        t1= t1[diferencia_t:]
+    
+    elif diferencia_t<0:
+        t2= t2[abs(diferencia_t):]
+    
+    t= np.mean([t1,t2], axis= 0)#Esto sera nuestro array de tiempos
+
+    posiciones= cent_finales#Y este nuestro array de posiciones
+
+    posiciones_y_tiempos= gestion.Escribir_Posiciones_Tiempos(filename_c1, posiciones, t)
+
+    """
+    No se con cual de los tiempos quedarme o que hacer, pero esto es lo que puedo hacer hasta ahora
+    """
+
+    return posiciones, t1, t2
+
+
+
