@@ -358,6 +358,24 @@ def Tiempos_csv(Nombre):
 
     return t
 
+def p_t_csv(Nombre):
+
+    """
+    Esta funcion es la que invocaremos en lectura para que tome el csv con las posiciones 
+     y tiempos y lo convierta en dos arrays
+    """
+
+    dataframe= pd.read_csv(Nombre + '.csv', sep= '\t', usecols= ['Posicion','Tiempo'])
+
+    pos= dataframe['Posicion'].to_numpy()
+    t= dataframe['Tiempo'].to_numpy()
+
+    return pos, t
+
+def vel_guardar_csv(Nombre, v_vec, v):
+    return True
+
+    
 def Escribir_Posiciones_Tiempos(Nombre, pos, t):
     
     Nombre_cortado= Nombre.split('_')[0]#Asi nos quedamos solo con la fecha en qeu fue grabado el video

@@ -7,6 +7,7 @@ from PIL import Image, ImageTk
 import imutils
 import time
 import cv2
+import os
 
 from aplicacion.constantes import style
 from aplicacion.grabacion.Camara_arreglo import Camara
@@ -450,7 +451,7 @@ class Home(tk.Frame):
                                 **style.STYLE
                                 ).grid(row=posicion['Gain'][0]+1, column=posicion['Gain'][1]+1)
         
-        boton_Procesado= boton_Gain_down= tk.Button(etiquetasFrame, 
+        boton_Procesado= tk.Button(etiquetasFrame, 
                                 text= 'Procesar',
                                 command= self.Cambiar_a_Procesado, 
                                 activebackground= style.BACKGROUND ,
@@ -537,6 +538,9 @@ class Procesado(tk.Frame):
 
         Una nota importante es que si quieres luego meter una barra de progreso tienes
         que ir con cuidado y usar un self.after() para conectar el hilo con el principal
+
+        Importante, cuando decimos Nombre, es un archivo sin su extencion, cuando decimos archivo 
+        estamos diciendo que va con extension
         """
 
         archivos= filedialog.askopenfilenames(
@@ -555,22 +559,93 @@ class Procesado(tk.Frame):
         Basicamente, lo que escribamos aqui va a ser invocado por la funcion mas grande y
         repetido tantas veces como videos carguemos a la aplicacion
         De tal forma que no seran devueltas las listas de centroides.
+
+        Tendremos una lista para cada camara, luego habra que usar otra funcion para llamar
+        a Union_camaras para que junte las trayectorias y por ultimo la que nos las pinte
         """
 
         self.procesado= [] #Es una lista que rellenaremos con arrays de centroides
         #Uno del primer video y otro del segundo.
 
+        Nombres=[]#Lista de los nombres sin extension
+
         for archivo in archivos:
+
+            Nombre= os.path.splitext(archivo)
+            Nombres.append(Nombre)
+
             restado= lectura.leer(archivo)
             centroides_validos= lectura.centroides(restado)
             self.procesado.append(centroides_validos)
-        self.porcesado= np.array(self.procesado)
+        self.procesado= np.array(self.procesado)
 
-        return self.procesado
+        """
+        Vale, aqui tenemos los centroides de una camara y de la otra con Union_camaras vamos a 
+        conseguir un unico array de centroides
+        """
+
+        cent_x= self.procesado[0]
+        cent_y= self.procesado[1]
+
+        cent_finales= lectura.Union_camaras(cent_x,cent_y, self.N_Objetos.get(),self.peso_mov.get(),self.xc1.get(),self.yc1.get(),self.zc1.get(),self.xc2.get(),self.yc2.get(),self.zc2.get(),self.Lx.get(),self.Ly.get())
+
+        """
+        Ya tenemos el array de centroides como lo queriamos, ahora tenemos que guardar la
+        y el tiempo en un csv. 
+
+        Pero ademas, al mismo tiempo que se que se guardan las trayectorias tenemos que nos 
+        escupe el array de posiciones y el de tiempos ya listos para que los usemos para 
+        pintar todo en un plot
+        """
+
+        posciones, tiempos= lectura.Guardar_trayectorias(cent_finales, archivos[0], archivos[1])
+
+        """
+        Nos falta solo sacar las imagenes usando posiciones y tiempos
+        """
+
+        return True
+    
+    def leer_y_procesar_csv(self):
+
+        """
+        A esta funcion le podremos pasar varios archivos csv que contengan en su interior
+        posiciones y tiempos.
+
+        Con ellos simplemente habra que leerlos y pintar las trayectorias con lo que nos den.
+        """
+        
+        archivos= filedialog.askopenfilenames(
+        title= "Selecciona los archivos de datos",
+        filetypes= [("Archivos de datos","*.csv")]
+        )
+
+        if archivos:
+            t= Thread(target= self.procesar_csv, args= (archivos,),daemon= True)
+            t.start()#el hilo deberia detenerse al acabarse la funcion procesar, ya veremos
+
+        return True
+    
+    def procesar_csv(self, archivos):
+
+        """
+        En esta funcion auxiliar de leer_y_procesar_csv vamos a tomar cada uno de los archivos que 
+        se pasen y extraeremos su posicion y tiempo para luego obtener las graficas pertinentes
+        """
+
+        for archivo in archivos:
+            
+            Nombre= os.path.splitext(archivo) #para luego usarlo en la llamada a la creacion de la grafica
+            """
+            Lo primero que queremos es disponer de las posiciones y el tiempo en su forma de array
+            para asi ya trabajar con ellos
+            """
+            pos, t= lectura.p_t_csv(Nombre)
+        
 
     def init_widgets(self): #Aqui van los botones y demas 
 
-        posicion= {'Select': [0,0], 'Titulo param': [0,0], 'Camara 1': [1,0], 'Camara 2': [2,0], 'N Objetos': [3,0], 'Peso Mov': [4,0], 'Lx': [3,2], 'Ly': [4,2]}
+        posicion= {'Select': [0,0],'CSV':[1,0], 'Titulo param': [0,0], 'Camara 1': [1,0], 'Camara 2': [2,0], 'N Objetos': [3,0], 'Peso Mov': [4,0], 'Lx': [3,2], 'Ly': [4,2]}
 
         #Vamos a hacer un frame en el que poner los botones para empezar
 
@@ -591,6 +666,14 @@ class Procesado(tk.Frame):
                                 activeforeground= style.TEXT,
                                 **style.STYLE
                                 ).grid(row=posicion['Select'][0], column=posicion['Select'][1])
+
+        boton_trayectorias_csv= tk.Button(botonesFrame, 
+                                text= 'Seleccionar Archivos CSV',
+                                command= self.leer_y_procesar_csv, 
+                                activebackground= style.BACKGROUND ,
+                                activeforeground= style.TEXT,
+                                **style.STYLE
+                                ).grid(row=posicion['CSV'][0], column=posicion['CSV'][1])
         
 
         #Vamos a poner un espacio para esos valores que tendran que ser añadidos por el usuario
