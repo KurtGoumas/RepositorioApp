@@ -44,7 +44,11 @@ class CamThread(Thread):
                 self.frame = frame
                 self.cam.out.write(frame)
                 self.frame_actual= time.time()
-                self.fps_real= 1/(self.frame_actual-self.frame_anterior)
+                if self.frame_actual-self.frame_anterior== 0:
+
+                    sel.fps_real= 0
+                else:
+                    self.fps_real= 1/(self.frame_actual-self.frame_anterior)
                 self.Prom_fps+= self.fps_real
                 MetadatosIteracionCamara= MetadatosIteracion(self.cam.filename,self.cam,self)
 
