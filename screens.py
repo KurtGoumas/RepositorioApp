@@ -1,3 +1,4 @@
+import numpy as np
 import tkinter as tk
 from tkinter import ttk
 from tkinter import filedialog
@@ -12,7 +13,7 @@ import os
 from aplicacion.constantes import style
 from aplicacion.grabacion.Camara_arreglo import Camara
 from aplicacion.grabacion.control import *
-from aplicacion.lectura import lectura
+from aplicacion.lectura import lectura, movimiento
 
 """
 En la pantalla de Home podremos previsualizar y grabar.
@@ -32,10 +33,10 @@ class CamThread(Thread):
         self.running = True
         self.Contador_Frames= 0
         self.Prom_fps= 0
-        self.fps_real=0
+        self.fps_real= 0
 
     def run(self):
-        self.frame_anterior= 0
+        self.frame_anterior= time.time()
         while self.running:
             ret, frame = self.cam.cap.read()
             if ret:
@@ -43,8 +44,8 @@ class CamThread(Thread):
                 self.frame = frame
                 self.cam.out.write(frame)
                 self.frame_actual= time.time()
-                self.Prom_fps+= 1/(self.frame_actual-self.frame_anterior)
                 self.fps_real= 1/(self.frame_actual-self.frame_anterior)
+                self.Prom_fps+= self.fps_real
                 MetadatosIteracionCamara= MetadatosIteracion(self.cam.filename,self.cam,self)
 
                 self.frame_anterior= self.frame_actual            
@@ -564,6 +565,7 @@ class Procesado(tk.Frame):
         a Union_camaras para que junte las trayectorias y por ultimo la que nos las pinte
         """
 
+        print('Entrando a procesar los vídeos')
         self.procesado= [] #Es una lista que rellenaremos con arrays de centroides
         #Uno del primer video y otro del segundo.
 
@@ -571,13 +573,14 @@ class Procesado(tk.Frame):
 
         for archivo in archivos:
 
-            Nombre= os.path.splitext(archivo)
+            Nombre= os.path.splitext(archivo)[0]
             Nombres.append(Nombre)
 
             restado= lectura.leer(archivo)
             centroides_validos= lectura.centroides(restado)
+            
             self.procesado.append(centroides_validos)
-        self.procesado= np.array(self.procesado)
+        self.procesado= np.array(self.procesado, dtype= object)
 
         """
         Vale, aqui tenemos los centroides de una camara y de la otra con Union_camaras vamos a 
@@ -585,25 +588,21 @@ class Procesado(tk.Frame):
         """
 
         cent_x= self.procesado[0]
+        t_x= lectura.Tiempos_csv(Nombres[0])#Necesitamos los tiempos para la interpolacion en Union_camaras
+        
+        
         cent_y= self.procesado[1]
+        t_y= lectura.Tiempos_csv(Nombres[1])
 
-        cent_finales= lectura.Union_camaras(cent_x,cent_y, self.N_Objetos.get(),self.peso_mov.get(),self.xc1.get(),self.yc1.get(),self.zc1.get(),self.xc2.get(),self.yc2.get(),self.zc2.get(),self.Lx.get(),self.Ly.get())
-
-        """
-        Ya tenemos el array de centroides como lo queriamos, ahora tenemos que guardar la
-        y el tiempo en un csv. 
-
-        Pero ademas, al mismo tiempo que se que se guardan las trayectorias tenemos que nos 
-        escupe el array de posiciones y el de tiempos ya listos para que los usemos para 
-        pintar todo en un plot
-        """
-
-        posciones, tiempos= lectura.Guardar_trayectorias(cent_finales, archivos[0], archivos[1])
-
+        print('Uniendo cámaras')
+        posiciones, tiempos= lectura.Union_camaras(cent_x,cent_y, t_x, t_y, self.N_Objetos.get(),self.peso_mov.get(),self.xc1.get(),self.yc1.get(),self.zc1.get(),self.xc2.get(),self.yc2.get(),self.zc2.get(),self.Lx.get(),self.Ly.get())
+        print('Cámaras Unidas')
         """
         Nos falta solo sacar las imagenes usando posiciones y tiempos
         """
 
+        resultados= movimiento.Movimiento(Nombres[0], posiciones, tiempos)#Daria igual que cogiera Nombres[0] o [1], porque lo voy a cortar
+        print('Todo genial')
         return True
     
     def leer_y_procesar_csv(self):
@@ -622,7 +621,7 @@ class Procesado(tk.Frame):
 
         if archivos:
             t= Thread(target= self.procesar_csv, args= (archivos,),daemon= True)
-            t.start()#el hilo deberia detenerse al acabarse la funcion procesar, ya veremos
+            t.start()#el hilo deberia detenerse al acabarse la funcion procesar_csv, ya veremos
 
         return True
     
@@ -640,8 +639,9 @@ class Procesado(tk.Frame):
             Lo primero que queremos es disponer de las posiciones y el tiempo en su forma de array
             para asi ya trabajar con ellos
             """
-            pos, t= lectura.p_t_csv(Nombre)
-        
+            pos, t, v, a= movimiento.Obtener_p_t_v_a(Nombre)
+
+            resultados= movimiento.Movimiento_csv(Nombre, pos, t, v, a)     
 
     def init_widgets(self): #Aqui van los botones y demas 
 
@@ -816,7 +816,7 @@ class Procesado(tk.Frame):
 
         ).grid(row= posicion['N Objetos'][0], column= posicion['N Objetos'][1]+1)
 
-        self.peso_mov= tk.Entry(etiquetasFrame,
+        peso_mov= tk.Entry(etiquetasFrame,
                           **style.STYLE,
                           textvariable= self.peso_mov,
                           width = self.text_entry_width

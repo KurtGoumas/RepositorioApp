@@ -69,7 +69,7 @@ def leer(filename):
     
     for i in range(restado.shape[0]):#Hay que pasarle los fotogramas uno a uno porque solo acepta uint8 de un canal
 
-        restado[i]= cv2.medianBlur(restado[i],7)
+        restado[i]= cv2.medianBlur(restado[i],5)
     
     restado= restado.astype(np.float32)#Volvemos a cambiar el formato para poder binarizar mas o menos
       
@@ -77,7 +77,7 @@ def leer(filename):
 
     return restado
 
-@njit(fastmath= True, parallel= True)
+@njit(fastmath= True)
 def cent_correspondencias(cent_primitivo_ant, cent_primitivo_act, peso= 1.):
     cent_anterior = []
     cent_actual = []
@@ -88,6 +88,7 @@ def cent_correspondencias(cent_primitivo_ant, cent_primitivo_act, peso= 1.):
                 cent_anterior.append(cent_primitivo_ant[k])
                 cent_actual.append(cent_primitivo_act[j])
     return cent_anterior, cent_actual
+
 
 def centroides(restado): #Le pasamos un video ya restado y procesado
     
@@ -154,9 +155,16 @@ def centroides(restado): #Le pasamos un video ya restado y procesado
     """
     
     centroides_finales= []
-    
+    centroides_fotograma_actual= np.array([])
     for i in range(1,n):#Para ir cogiendo cada fotograma, empezamos en 1 y hacemos correspondencia entre el actual y el anterior
 
+        """
+        Primero nos aseguramos que no le metemos a numba un array vacio porque eso nos la puede liar
+        """
+
+        if len(centroides_aproximados[i-1])==0 or len(centroides_aproximados[i])== 0:
+            centroides_finales.append(np.array([]))#Le pasamos un array vacio
+            continue
         
         centroides_fotograma_anterior, centroides_fotograma_actual= cent_correspondencias(centroides_aproximados[i-1], centroides_aproximados[i])
         
@@ -165,7 +173,11 @@ def centroides(restado): #Le pasamos un video ya restado y procesado
         
         centroides_finales.append(centroides_fotograma_anterior)
     
-    centroides_finales.append(centroides_fotograma_actual)#Para añadir el ultimo
+    if len(centroides_fotograma_actual)>0:
+        centroides_finales.append(centroides_fotograma_actual)#Para añadir el ultimo
+    
+    else:
+        centroides_finales.append(np.array([]))
         
     return centroides_finales
 
@@ -232,12 +244,12 @@ def Resolver_Sistema(cent_x, cent_y,xc1, yc1, zc1, xc2, yc2, zc2, Lx, Ly, w= 800
         siendo que Lx y Ly valen 1 precisamente por eso.
         """
         
-        M= np.array([[y2-yc2,xc2-Lx,0],
-            [z2-zc2,0,xc2-Lx],
-            [yc1-Ly,x1-xc1,0],
-            [0,z1-zc1,yc1-Ly]])#Si hay algun problema, a lo mejor es en esta matriz
+        M= np.array([[x1-xc1,yc1-Ly,0],
+            [z1-zc1,0,yc1-Ly],
+            [xc2-Lx,y2-yc2,0],
+            [0,z2-zc2,xc2-Lx]])#Si hay algun problema, a lo mejor es en esta matriz
         
-        N= np.array([xc2*y2 - Lx*yc2, xc2*z2 - Lx*zc2, yc1*x1 - Ly*xc1, yc1*z1 - Ly*zc1])
+        N= np.array([yc1*x1 - Ly*xc1, yc1*z1 - Ly*zc1, xc2*y2 - Lx*yc2, xc2*z2 - Lx*zc2])
         
         sol= scp.linalg.lstsq(M,N)[0]#La que importa es la cero, el resto son otras cosas
         
@@ -279,8 +291,21 @@ def Ordenar_3D(cent_xyz, N_objetos, peso):#N_objetos es el numero de objetos que
                     Ordenado[i][f]= Ordenado[i][f-1]#Si no encontramos correspondencia porque la gamba se ha escondido, rellenamos con el anterior
                     
     return Ordenado
+
+def Interpolar_trayectoria(cent_interpolado, t_interpolado, t_referencia):
+    """
+    Esta funcion pretende darnos unos arrays de centroides con la misma longitud y 
+    un tiempo unico global del experimento.
     
-def Union_camaras(cent_finales_x, cent_finales_y, N_objetos= 10, peso=1, xc1= 0.5, yc1= 1.5, zc1= 0.5 , xc2= 1.5, yc2= 0.5, zc2= 0.5, Lx= 1, Ly= 1):
+    Para ello vamos a intentar hacer una interpolacion
+    """   
+    
+    spline= scp.interpolate.make_smoothing_spline(cent_interpolado, t_interpolado)
+      
+    return spline(t_referencia), t_referencia
+    
+    
+def Union_camaras(cent_finales_x, cent_finales_y,t_x, t_y, N_objetos= 10, peso=1, xc1= 0.5, yc1= 1.5, zc1= 0.5 , xc2= 1.5, yc2= 0.5, zc2= 0.5, Lx= 1, Ly= 1):
     
     """
     En esta funcion vamos a intentar por fin obtener un array del tipo 
@@ -299,10 +324,10 @@ def Union_camaras(cent_finales_x, cent_finales_y, N_objetos= 10, peso=1, xc1= 0.
     diferencia= len(cent_finales_x)-len(cent_finales_y)
 
     if diferencia>0:
-        cent_finales_x= cent_finales_x[diferencia:]
+        cent_finales_x , t= Interpolar_trayectoria(cent_finales_x, t_x, t_y)
     
     elif diferencia<0:
-        cent_finales_y= cent_finales_y[abs(diferencia):]
+        cent_finales_y, t= Interpolar_trayectoria(cent_finales_y, t_y, t_x)
     
     cent_ord_x= []
     cent_ord_y= []
@@ -339,7 +364,7 @@ def Union_camaras(cent_finales_x, cent_finales_y, N_objetos= 10, peso=1, xc1= 0.
     
     cent_finales= Ordenar_3D(cent_xyz, N_objetos, peso)
 
-    return cent_finales
+    return cent_finales, t
 
 
 """
@@ -358,6 +383,7 @@ def Tiempos_csv(Nombre):
 
     return t
 
+#ESTA NOS LA TENEMOS QUE QUITAR CUANDO HAGAMOS LA INTERPOLACION
 def p_t_csv(Nombre):
 
     """
@@ -372,10 +398,7 @@ def p_t_csv(Nombre):
 
     return pos, t
 
-def vel_guardar_csv(Nombre, v_vec, v):
-    return True
-
-    
+#ESTA NOS LA TENEMOS QUE QUITAR CUANDO HAGAMOS LA INTERPOLACION
 def Escribir_Posiciones_Tiempos(Nombre, pos, t):
     
     Nombre_cortado= Nombre.split('_')[0]#Asi nos quedamos solo con la fecha en qeu fue grabado el video
@@ -385,47 +408,6 @@ def Escribir_Posiciones_Tiempos(Nombre, pos, t):
     dataframe.to_csv(Nombre_nuevo + '.csv', sep= '\t', index= False)
 
     return True
-
-def Guardar_trayectorias(cent_finales, filename_c1, filename_c2):
-
-    """
-    Esta funcion toma los centroides cuando ya estan listos para el calculo de las treayectorias
-    y los guarda en un archivo de metadatos junto con los tiempos.
-
-    Los tiempos son sacados de los archivos de metadatos correspondientes a videos de la camara 1 y camara 2
-
-    Importante, los nombre de los archivos que entran aqui es sin la extension, para asi poder 
-    tratarlos para nombrar nuevos archivos
-    """
-
-    t1= Tiempos_csv(filename_c1)
-    t2= Tiempos_csv(filename_c2)
-
-    """
-    t1 y t2 son dos arrays de tiempos que no tienen que ser iguales asi que tendremos que hacer lo 
-    mismo que con los centroides de Union_camaras y luego nos quedaremos con un t que sera la 
-    media de ambos 
-    """
-
-    diferencia_t= len(t1)-len(t2)
-    
-    if diferencia_t>0:
-        t1= t1[diferencia_t:]
-    
-    elif diferencia_t<0:
-        t2= t2[abs(diferencia_t):]
-    
-    t= np.mean([t1,t2], axis= 0)#Esto sera nuestro array de tiempos
-
-    posiciones= cent_finales#Y este nuestro array de posiciones
-
-    posiciones_y_tiempos= Escribir_Posiciones_Tiempos(filename_c1, posiciones, t)
-
-    """
-    No se con cual de los tiempos quedarme o que hacer, pero esto es lo que puedo hacer hasta ahora
-    """
-
-    return posiciones, t
 
 
 

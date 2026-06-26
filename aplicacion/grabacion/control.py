@@ -6,7 +6,13 @@ import os
 import pandas as pd
 
 def listar_indices(max= 2):
-    l = [i for i in range(max) if cv2.VideoCapture(i).isOpened() and cv2.VideoCapture(i).release() is None]
+    l = []
+    for i in range(max):
+        cap = cv2.VideoCapture(i)
+        if cap.isOpened():
+            l.append(i)
+        cap.release()
+    return l
 
     return l
 
