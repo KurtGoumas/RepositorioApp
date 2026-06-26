@@ -32,7 +32,7 @@ def tiempo_grabacion():
 
 def MetadatosGlobalesIniciales(Nombre, camara):
     with open(Nombre + '_globales' + '.csv', 'w', newline='') as file:
-        formato = csv.writer(file, delimiter = '\n',dialect='excel' ,quoting=csv.QUOTE_NONE, escapechar= '\\')
+        formato = csv.writer(file, delimiter = '\t',dialect='excel' ,quoting=csv.QUOTE_NONE, escapechar= '\\')
         lista= [f'{camara.shape}',f'{camara.fourcc}']
         formato.writerow(lista)
 
@@ -40,7 +40,7 @@ def MetadatosGlobalesIniciales(Nombre, camara):
 
 def Resumen_final(Nombre, fps, frames):
     with open(Nombre + '_globales' + '.csv', 'a', newline='') as file:
-        formato = csv.writer(file, delimiter = '\n',dialect='excel' ,quoting=csv.QUOTE_NONE, escapechar= '\\')
+        formato = csv.writer(file, delimiter = '\t',dialect='excel' ,quoting=csv.QUOTE_NONE, escapechar= '\\')
         lista= [f'{fps}',f'{frames}']
         formato.writerow(lista)
 
