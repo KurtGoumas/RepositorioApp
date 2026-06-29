@@ -24,7 +24,7 @@ def tiempo_grabacion():
     return tiempo,intervalo
 
 def MetadatosGlobalesIniciales(Nombre, camara):
-    with open(Nombre + '_globales' + '.csv', 'w', newline='') as file:
+    with open(Nombre + '_globales' + '.csv', 'w', newline='', encoding= 'latin-1') as file:
         formato = csv.writer(file, delimiter = '\t',dialect='excel' ,quoting=csv.QUOTE_NONE, escapechar= '\\')
         lista= [f'{camara.shape}',f'{camara.fourcc}']
         formato.writerow(lista)
@@ -32,7 +32,7 @@ def MetadatosGlobalesIniciales(Nombre, camara):
     return Nombre
 
 def Resumen_final(Nombre, fps, frames):
-    with open(Nombre + '_globales' + '.csv', 'a', newline='') as file:
+    with open(Nombre + '_globales' + '.csv', 'a', newline='', encoding= 'latin-1') as file:
         formato = csv.writer(file, delimiter = '\t',dialect='excel' ,quoting=csv.QUOTE_NONE, escapechar= '\\')
         lista= [f'{fps}',f'{frames}']
         formato.writerow(lista)
@@ -48,7 +48,7 @@ def MetadatosGlobalesFinales(hilo):
 def MetadatosIteracion(Nombre,camara,hilo):
 
     existe= os.path.exists(Nombre + '.csv')
-    with open(Nombre + '.csv', 'a', newline='') as file:
+    with open(Nombre + '.csv', 'a', newline='', encoding= 'latin-1') as file:#El encoding es para que lea bien los Headers
         formato = csv.writer(file, delimiter = '\t',dialect='excel' ,quoting=csv.QUOTE_NONE, escapechar= '\\')
         if not existe:
             formato.writerow(['Fotograma', 'Hora-Minuto-Segundo','Tiempo', 'fps','Exposición','Ganancia', 'Bitrate','WB'])

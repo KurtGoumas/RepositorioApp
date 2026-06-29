@@ -45,7 +45,6 @@ class CamThread(Thread):
                 self.cam.out.write(frame)
                 self.frame_actual= time.time()
                 if self.frame_actual-self.frame_anterior== 0:
-
                     sel.fps_real= 0
                 else:
                     self.fps_real= 1/(self.frame_actual-self.frame_anterior)
@@ -510,19 +509,20 @@ class Procesado(tk.Frame):
         #Todos los valores de la configuracion del dispositivo experimental
 
         self.xc1= tk.DoubleVar(self, value= '0.5')
-        self.yc1= tk.DoubleVar(self, value= '1.5')
-        self.zc1= tk.DoubleVar(self, value= '0.5')
+        self.yc1= tk.DoubleVar(self, value= '1.86')
+        self.zc1= tk.DoubleVar(self, value= '0.43')
 
-        self.xc2= tk.DoubleVar(self, value= '1.5')
+        self.xc2= tk.DoubleVar(self, value= '1.86')
         self.yc2= tk.DoubleVar(self, value= '0.5')
-        self.zc2= tk.DoubleVar(self, value= '0.5')
+        self.zc2= tk.DoubleVar(self, value= '0.43')
 
         self.Lx= tk.DoubleVar(self, value= '1')
         self.Ly= tk.DoubleVar(self, value= '1')
 
-        self.N_Objetos= tk.IntVar(self, value= '10')
+        self.N_Objetos= tk.IntVar(self, value= '1')
 
-        self.peso_mov= tk.DoubleVar(self, value= '1')
+        self.peso_mov= tk.DoubleVar(self, value= '10')
+        self.peso_3d= tk.DoubleVar(self, value= 1)
 
         self.text_entry_width = 10
 
@@ -584,6 +584,7 @@ class Procesado(tk.Frame):
             centroides_validos= lectura.centroides(restado)
             
             self.procesado.append(centroides_validos)
+            del restado #Liberamos la celda de memoria de rstado para que no pete 
         self.procesado= np.array(self.procesado, dtype= object)
 
         """
@@ -592,10 +593,12 @@ class Procesado(tk.Frame):
         """
 
         cent_x= self.procesado[0]
+        #print('x :',cent_x[:20])
         t_x= lectura.Tiempos_csv(Nombres[0])#Necesitamos los tiempos para la interpolacion en Union_camaras
         
         
         cent_y= self.procesado[1]
+        #print('y :',cent_y[:20])
         t_y= lectura.Tiempos_csv(Nombres[1])
 
         print('Uniendo cámaras')
@@ -607,6 +610,7 @@ class Procesado(tk.Frame):
 
         resultados= movimiento.Movimiento(Nombres[0], posiciones, tiempos)#Daria igual que cogiera Nombres[0] o [1], porque lo voy a cortar
         print('Todo genial')
+
         return True
     
     def leer_y_procesar_csv(self):

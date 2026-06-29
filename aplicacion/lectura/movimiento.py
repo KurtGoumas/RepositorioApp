@@ -1,5 +1,8 @@
 import numpy as np 
 import scipy as scp
+import matplotlib
+matplotlib.use('Agg')#Para que no intente abrir ventanas
+from matplotlib import animation 
 import matplotlib.pyplot as plt
 from numba import njit, prange
 import pandas as pd
@@ -19,7 +22,7 @@ def Escribir_p_t_v_a(Nombre, pos, t, v, v_vec, a, a_vec):
                               'vz': v_vec[:,2],'Módulo Velocidad': v, 
                               'ax': a_vec[:,0], 'ay': a_vec[:,1], 'az': a_vec[:,2],
                               'Módulo Aceleración': a})
-    dataframe.to_csv(Nombre_nuevo + '.csv', sep= '\t', index= False)
+    dataframe.to_csv(Nombre_nuevo + '.csv', sep= '\t', index= False, encoding= 'latin-1')
 
     return True
 
@@ -32,7 +35,7 @@ def Obtener_p_t_v_a(Nombre):
 
     dataframe= pd.read_csv(Nombre + '.csv', sep= '\t', usecols= ['x', 'y', 'z', 'Tiempo',
                                                                   'Módulo Velocidad', 
-                                                                  'Módulo Aceleracion'])
+                                                                  'Módulo Aceleración'], encoding= 'latin-1')
     
     #Cogemos el tiempo, velocidad y aceleracion
     t= dataframe['Tiempo'].to_numpy()
@@ -93,6 +96,48 @@ def velocidades(pos, t):
 
     return v_vec, v, a_vec, a
 
+def Animacion_Movimiento(pos,t,skip = 1, save = False, saveName = "Animacion"):
+    
+    """
+    Dada las posiciones tipo [fotograma[x,y,z], ...], se hace una animacion en el tiempo
+    Cambia skip si quieres hacer que la animacion vaya mas rapido
+    """
+    fig = plt.figure()
+    ax = fig.add_subplot(projection = '3d')
+    ax.set_title("Animación del movimiento")
+    ax.set_xlabel("X")
+    ax.set_ylabel("Y")
+    ax.set_zlabel("Z")
+    timeText = ax.text2D(.01, .99, 'Tiempo actual: 0 s', ha='left', va='top', transform=ax.transAxes)
+    
+    # Pongamos el minimo y maximo de los ejes
+    ax.set_xlim3d(np.min(pos[:,0]), np.max(pos[:,0]))
+    ax.set_ylim3d(np.min(pos[:,1]), np.max(pos[:,1]))
+    ax.set_zlim3d(np.min(pos[:,2]), np.max(pos[:,2]))
+    
+    # Dibujamos trayectoria?
+    ax.plot(pos[:,0],pos[:,1],pos[:,2], linestyle = "dashed", color = "black", linewidth = 0.5)
+    
+    # Inicializamos la animacion
+    lines = [ax.scatter([],[],[], s = 30)]
+    def init():
+        # frame inicial animacion
+        timeText.set_text('Tiempo actual: 0.000 s ')
+        for line in lines:
+            line._offsets3d = ([], [],[])
+        return lines + [timeText]
+    def animate(frame):
+        timeText.set_text(f'Tiempo actual: {round(t[frame],3)} s ')
+        for line in lines:
+            line._offsets3d = ([pos[frame,0]],[pos[frame,1]],[pos[frame,2]])
+        return lines + [timeText]
+    framesTotal = len(t)
+    frames_indices = range(0, framesTotal, skip)
+    anim = animation.FuncAnimation(fig, animate, init_func=init,
+                                   frames=frames_indices, blit=False)
+    if save: anim.save(saveName, writer="pillow")
+    return anim
+
 def Movimiento(Nombre, pos, t):
     
     """
@@ -106,14 +151,16 @@ def Movimiento(Nombre, pos, t):
     if not os.path.exists('./resultados'):
         os.makedirs('./resultados')
 
-    Nombre_cortado= Nombre.split('_')[0]#Asi nos quedamos solo con la fecha en qeu fue grabado el video
+    Nombre_cortado= os.path.basename(Nombre).split('_')[0]#Asi nos quedamos solo con la fecha en qeu fue grabado el video
     Nombre_3D= 'resultados/' + Nombre_cortado + '_plot_trayectoria'
+    
     Nombre_vel= 'resultados/' + Nombre_cortado + '_plot_velocidad'
     Nombre_ac= 'resultados/' + Nombre_cortado + '_plot_aceleracion'
+    Nombre_animacion= 'resultados/' + Nombre_cortado + '_Animacion.gif'
 
     #Pintamos las posiciones en funcion del timepo para el individuo
-    
-    ax1= plt.figure().add_subplot(projection= '3d')
+    fig = plt.figure()
+    ax1= fig.add_subplot(projection= '3d')
 
     ax1.set_title('Reconstrucción de la trayectoria del inviduo en el espacio.')
     ax1.set_xlabel(r'$x [cm]$')
@@ -121,17 +168,25 @@ def Movimiento(Nombre, pos, t):
     ax1.set_zlabel(r'$z [cm]$')
     
     #Preparamos los arrays de x,y,z
+
+    pos= pos[0]# Porque el array es de la forma (trayectorias, Fotogramas, posiciones)
     
     x= pos[:, 0]
     y= pos[:, 1]
     z= pos[:, 2]
     
-    ax1.scatter(x,y,z, label= 'Movimiento en todo el espacio de la gamba')
+    ax1.scatter(x,y,z, label= 'Movimiento en todo el espacio de la gamba', s= 8)
     ax1.legend(loc= 'best')
-    
-    plt.savefig(Nombre_3D)#creo que tengo que crear un directorio pero bueno, veremos 
-    plt.show()
-    
+    fig.savefig(Nombre_3D)#creo que tengo que crear un directorio pero bueno, veremos 
+    #fig.show()
+
+    """
+    Ahora vamos a hacer una animacion 
+    """
+
+    anim= Animacion_Movimiento(pos, t, save= True, saveName= Nombre_animacion)
+
+    '''
     """
     Lo siguiente que vamos a hacer es calcularnos las velocidades y las aceleraciones 
     y las guardaremos en un ultimo csv para disponer ellas si hiciera falta
@@ -182,7 +237,7 @@ def Movimiento(Nombre, pos, t):
     """
 
     Guardado= Escribir_p_t_v_a(Nombre_cortado, pos, t, v, v_vec, a, a_vec)
-
+    '''
     return True
 
 def Movimiento_csv(Nombre, pos, t, v, a):

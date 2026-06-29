@@ -56,7 +56,7 @@ class Camara:
         fecha = dt.datetime.now()
         self.filename = f'videos/{fecha.day}-{fecha.month}-{fecha.year}-{fecha.hour}-{fecha.minute}-{fecha.second}_{self.indice}'
         self.fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-        if self.cap.get(cv2.CAP_PROP_FPS)= 0:
+        if self.cap.get(cv2.CAP_PROP_FPS)> 0:
             self.fps= self.cap.get(cv2.CAP_PROP_FPS)
         else:
             self.fps= 30

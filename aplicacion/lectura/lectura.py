@@ -24,6 +24,70 @@ Por otro lado podremos tomar toda una carpeta y trabajar con ella.
 
 def leer(filename):
 
+    cap = cv2.VideoCapture(filename)
+
+    """ 
+    Vamos a hacerlo en dos pasada para no cargar el video entero de golpe y evitar problemas de 
+    memoria
+
+    En la primera pasada obtenedremos el fondo
+
+    Para construir el fondo temamos 100 fotogramas aleatorios
+    """
+
+    fotogramas = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))#Asi llamamos al numero de frames sin cargar el video
+    indices = np.random.choice(fotogramas, size=min(100, fotogramas), replace=False)
+    muestras = []
+    for i in sorted(indices):#Tomamos los fotogrmas ordenados de menor a mayor 
+        cap.set(cv2.CAP_PROP_POS_FRAMES, i)#Nos situamos en ese fotograma
+        ret, frame = cap.read()
+        if ret:
+            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            muestras.append(frame[200:800, 500:1300])
+    
+    fondo = scp.stats.mode(np.array(muestras), keepdims=True)[0][0].astype(np.float32)#Creamos un fondo quedandonos con la moda de cada uno de los puntos de cada fotograma en el tiempo
+
+    """
+    En fondo nos quedamos con el cero porque suelta dos arrays, y el unico que
+    interesa es el primero
+    """
+
+    """
+    Muy bien, ta tenemos el fondo creado
+
+    Ahora toca hacer la verdadera pasada e ir procesando cada fotograma uno a uno 
+
+    Queremos restarlos y despues ir puliendo la imagen para quitar todo lo que no sea 
+    objeto
+    
+    Para ello usaremos un filtro de mediana con el metodo cv2.medianBlur
+    """
+    restado = []
+    cap.set(cv2.CAP_PROP_POS_FRAMES, 0)#Volvemos a poner el puntero mirando al primer fotograma
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            break
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)[200:800, 500:1300].astype(np.float32)
+        """
+        Lo pasamos a escala de grises para quedarnos solo con uno
+
+        Lo recortamos apra que no se vea nada que no sea la pecera 
+
+        Para pasarle medianBlur hay que 
+        cambiarlo a uno que este admita, y solo admite np.uint8 de un solo canal
+        """
+        resta = np.clip(frame - fondo, 0, 255).astype(np.uint8)#Los restamos
+        resta = cv2.medianBlur(resta, 3)#Le pasamos el filtro de la mediana
+        resta = (resta > 100).astype(np.uint8) * 255#Binarizamos
+        restado.append(resta)
+
+    cap.release()
+    return np.array(restado)
+
+
+def leer_antiguo(filename):#Si la necesito para algo la consulto 
+
     cap= cv2.VideoCapture(filename)
 
     video_lista= []
@@ -33,7 +97,7 @@ def leer(filename):
             break
         
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)#Lo pasamos a escala de grises para quedarnos solo con uno
-        video_lista.append(frame[200:800:,500:1300])#Lo añadimos a una lista recortando a mano todo lo que no sea pecera, se debe cambiar segun el setup
+        video_lista.append(frame[200:800,500:1300])#Lo añadimos a una lista recortando a mano todo lo que no sea pecera, se debe cambiar segun el setup
     video_array= np.array(video_lista)#Lo transformamos en un array que nos gusta mas trabajar asi 
     
     """
@@ -78,10 +142,10 @@ def leer(filename):
     return restado
 
 @njit(fastmath= True)
-def cent_correspondencias(cent_primitivo_ant, cent_primitivo_act, peso= 1.):
+def cent_correspondencias(cent_primitivo_ant, cent_primitivo_act, peso= 10.):
     cent_anterior = []
     cent_actual = []
-    for j in prange(len(cent_primitivo_act)):
+    for j in range(len(cent_primitivo_act)):
         for k in range(len(cent_primitivo_ant)):
             norma= ((cent_primitivo_ant[k][0]-cent_primitivo_act[j][0])**2 + (cent_primitivo_ant[k][1]-cent_primitivo_act[j][1])**2)**0.5
             if norma<= peso:
@@ -153,9 +217,10 @@ def centroides(restado): #Le pasamos un video ya restado y procesado
     Ahora que ya tenemos la lista de centroides aproximados, los volvemos a meter en un bucle 
     para que nos quedemos unicamente con los centroides que tengan correspondencia entre frames
     """
-    
+
     centroides_finales= []
     centroides_fotograma_actual= np.array([])
+    ultimo_valido= centroides_aproximados[0]#Por si alguno estuviera vacio
     for i in range(1,n):#Para ir cogiendo cada fotograma, empezamos en 1 y hacemos correspondencia entre el actual y el anterior
 
         """
@@ -163,26 +228,32 @@ def centroides(restado): #Le pasamos un video ya restado y procesado
         """
 
         if len(centroides_aproximados[i-1])==0 or len(centroides_aproximados[i])== 0:
-            centroides_finales.append(np.array([]))#Le pasamos un array vacio
+            centroides_finales.append(ultimo_valido)#Si no hay centroides en alguno, le pasamos el ultimo valido y seguimos
             continue
         
         centroides_fotograma_anterior, centroides_fotograma_actual= cent_correspondencias(centroides_aproximados[i-1], centroides_aproximados[i])
         
         centroides_fotograma_anterior= np.array(centroides_fotograma_anterior)
         centroides_fotograma_actual= np.array(centroides_fotograma_actual)
+
+        if len(centroides_fotograma_anterior)==0:#Si no hubo ninguna correspondencia
+            #print('No encontre correspondencias en:', i)
+            centroides_finales.append(ultimo_valido)
         
-        centroides_finales.append(centroides_fotograma_anterior)
+        else:
+            ultimo_valido= centroides_fotograma_anterior
+            centroides_finales.append(centroides_fotograma_anterior)
     
     if len(centroides_fotograma_actual)>0:
         centroides_finales.append(centroides_fotograma_actual)#Para añadir el ultimo
     
     else:
-        centroides_finales.append(np.array([]))
+        centroides_finales.append(ultimo_valido)
         
     return centroides_finales
 
-@njit(fastmath= True, parallel= True)
-def Ordenar_fotograma(cent_x, cent_y, peso= 1.):
+@njit(fastmath= True)#, parallel= True)
+def Ordenar_fotograma(cent_x, cent_y, peso= 10., offset= 100):#Este offset es para intentar arreglar que las camaras no estan exactamente a la misma altura pese a intentarlo
     """
     En esta funcion tomamos cada uno de los objetos del mismo fotograma para las dos camaras y los vamos
     comparando por su coordenada z.
@@ -196,11 +267,11 @@ def Ordenar_fotograma(cent_x, cent_y, peso= 1.):
     cent_ord_x= []
     cent_ord_y= []
     
-    for j in prange(len(cent_x)):
+    for j in range(len(cent_x)):#prange(len(cent_x)):
         
         for k in range(len(cent_y)):
-            norma= abs(cent_x[j][1] - cent_y[k][1])#Si no se traga abs() haces ((resta)**2)**0.5
-            
+            norma= abs(cent_x[j][1] - (cent_y[k][1]+offset))#Si no se traga abs() haces ((resta)**2)**0.5
+
             if norma<=peso:
                 cent_ord_x.append(cent_x[j])
                 cent_ord_y.append(cent_y[k])
@@ -252,13 +323,13 @@ def Resolver_Sistema(cent_x, cent_y,xc1, yc1, zc1, xc2, yc2, zc2, Lx, Ly, w= 800
         N= np.array([yc1*x1 - Ly*xc1, yc1*z1 - Ly*zc1, xc2*y2 - Lx*yc2, xc2*z2 - Lx*zc2])
         
         sol= scp.linalg.lstsq(M,N)[0]#La que importa es la cero, el resto son otras cosas
-        
+
         cent_xyz.append(sol)
     
     return cent_xyz
 
-@njit(fastmath= True, parallel= True)
-def Ordenar_3D(cent_xyz, N_objetos, peso):#N_objetos es el numero de objetos que espera el usuario
+#@njit(fastmath= True, parallel= True)
+def Ordenar_3D(cent_xyz, N_objetos= 1., peso= 10.):#N_objetos es el numero de objetos que espera el usuario
 
     """
     Esta funcion toma el tipo de objeto que tenemos y lo convierte en un tipo 
@@ -268,7 +339,9 @@ def Ordenar_3D(cent_xyz, N_objetos, peso):#N_objetos es el numero de objetos que
     Nf= len(cent_xyz)
     
     Ordenado= np.zeros((N_objetos,Nf,3))
-    Ordenado[:,0:,]= cent_xyz[0]#Rellenamos con posiciones el primer fotograma
+    #Ordenado[:,0:,]= cent_xyz[0]#Rellenamos con posiciones el primer fotograma
+    for i in range(N_objetos):#Rellenamos con los N primeros objetos el fotograma inicial
+        Ordenado[:,0,:]= np.array(cent_xyz[0][i])
     
     for f in range(1, Nf):
         n0= len(cent_xyz[f])#Numero de objetos del fotograma a tratar
@@ -298,11 +371,52 @@ def Interpolar_trayectoria(cent_interpolado, t_interpolado, t_referencia):
     un tiempo unico global del experimento.
     
     Para ello vamos a intentar hacer una interpolacion
-    """   
+
+    Lo que vamos a ahe es que, para cada punto del t_referencia vamos a buscar el t_interpolado mas
+    cercano por izquierda (a) y por derecha (b)
+
+    Despues uniremos a y b con una recta y evaluaremos en el t_referencia para obtener la supuesta posicion
+    del centroide en ese tiempo
+
+    La recta es de la forma pos= m*t_pos + n. Donde m= b-a/t_b-t_a y n= a - m*t_a
+    """ 
+    #print('y dentro: ',cent_interpolado[:20])
+    cent_nuevo = np.empty(len(t_referencia), dtype=object)
+    for k in range(len(t_referencia)):
+        cent_nuevo[k] = np.array([])
+
+    cent_nuevo[0]= cent_interpolado[0].copy()#Porque es poible que al inicio no tengamos nada a la izquierda
+    cent_nuevo[-1]= cent_interpolado[-1].copy()#Porque es posible que al final no tengamos nada a la derecha
+
+    for i in range(1,len(t_referencia)-1):
+        
+        a_indx= np.argwhere(t_interpolado<t_referencia[i])[-1][0]#Para coger el mas cercano por la izquierda
+        b_indx= np.argwhere(t_interpolado>=t_referencia[i])[0][0]#Para coger el mas cercano por la derecha
+
+        a= cent_interpolado[a_indx]
+        b= cent_interpolado[b_indx]
+
+        t_a= t_interpolado[a_indx]
+        t_b= t_interpolado[b_indx]
+
+        interpolados= []
+
+        #print(f'a= {len(a)}, b= {len(b)}')
+        for j in range(min(len(a),len(b))):#Con len(b) me aseguro que si aparece un objeto de la nada no se lo coma
+
+            m= (b[j]-a[j])/(t_b-t_a)
+
+            n= a[j]-m*t_a
+
+            interpolado= m*t_referencia[i]+n
+            interpolados.append(interpolado)
+
+        interpolados= np.array(interpolados)
+        cent_nuevo[i]= interpolados
     
-    spline= scp.interpolate.make_smoothing_spline(cent_interpolado, t_interpolado)
+    #spline= scp.interpolate.make_smoothing_spline(t_interpolado, cent_interpolado[i][j])
       
-    return spline(t_referencia), t_referencia
+    return cent_nuevo, t_referencia #spline(t_referencia), t_referencia
     
     
 def Union_camaras(cent_finales_x, cent_finales_y,t_x, t_y, N_objetos= 10, peso=1, xc1= 0.5, yc1= 1.5, zc1= 0.5 , xc2= 1.5, yc2= 0.5, zc2= 0.5, Lx= 1, Ly= 1):
@@ -322,25 +436,44 @@ def Union_camaras(cent_finales_x, cent_finales_y,t_x, t_y, N_objetos= 10, peso=1
     """
 
     diferencia= len(cent_finales_x)-len(cent_finales_y)
+    #print('dif: ', diferencia)
 
-    if diferencia>0:
+    if diferencia>=0:
+        #print('Vamos a interpolar')
         cent_finales_x , t= Interpolar_trayectoria(cent_finales_x, t_x, t_y)
     
     elif diferencia<0:
+        #print('Vamos a interpolar')
         cent_finales_y, t= Interpolar_trayectoria(cent_finales_y, t_y, t_x)
     
+    #print('Hemos interpolado')
     cent_ord_x= []
     cent_ord_y= []
     
     n= len(cent_finales_x) #Damos por hecho que son el mismo numero de fotogramas ya que nos hemos asegurado de ello
     
+    #print('Vamos a ordenar fotogramas')
+    #print('entrar a ordenar x :', cent_finales_x[:5])
+    #print('entrar a ordenar y: ', cent_finales_y[:5])
+
     for i in range(n):
+
+        if len(cent_finales_x[i]) == 0 or len(cent_finales_y[i]) == 0:
+            if i > 0:
+                cent_ord_x.append(cent_ord_x[i-1])
+                cent_ord_y.append(cent_ord_y[i-1])
+
+            else:
+                cent_ord_x.append(np.array([]))
+                cent_ord_y.append(np.array([]))
+            continue
         
-        cent_x, cent_y= Ordenar_fotograma(cent_finales_x[i], cent_finales_y[i],peso)
+        cent_x, cent_y= Ordenar_fotograma(cent_finales_x[i], cent_finales_y[i],100)
         
         cent_ord_x.append(cent_x)
         cent_ord_y.append(cent_y)
     
+    #print('Fotogramas ordenados')
     """
     Aqui tenemos dos arrays tal que,
     
@@ -354,15 +487,33 @@ def Union_camaras(cent_finales_x, cent_finales_y,t_x, t_y, N_objetos= 10, peso=1
     
     cent_xyz= [fotograma:[objeto:[x,y,z],...],...]
     """
+
+    #print('ordenado x: ',cent_ord_x[:5])
+    #print('ordenado y: ',cent_ord_y[:5])
     
     cent_xyz= []
+    #print('Vamos a resolver el sistema')
     
     for i in range(n):
+
+        if len(cent_ord_x[i]) == 0 or len(cent_ord_y[i]) == 0:
+
+            if i>0:
+
+                cent_xyz.append(cent_xyz[i-1])
+            
+            else:
+
+                cent_xyz.append([np.zeros(3)])
+            continue
         
         posicion= Resolver_Sistema(cent_ord_x[i], cent_ord_y[i], xc1, yc1, zc1, xc2, yc2, zc2, Lx, Ly)
         cent_xyz.append(posicion)
-    
+    #print('Sistema resuelto, vamos a ordenar los 3D')
+
+    #print('Listos ordenar 3D: ',cent_xyz[:5])
     cent_finales= Ordenar_3D(cent_xyz, N_objetos, peso)
+    #print('Ordenados 3D: ',cent_finales[:5])
 
     return cent_finales, t
 
@@ -377,7 +528,7 @@ def Tiempos_csv(Nombre):
     convierta en un array
     """
 
-    dataframe= pd.read_csv(Nombre + '.csv', sep= '\t', usecols= ['Tiempo'])
+    dataframe= pd.read_csv(Nombre + '.csv', sep= '\t', usecols= ['Tiempo'], encoding= 'latin-1')
 
     t= dataframe['Tiempo'].to_numpy()
 
