@@ -78,7 +78,7 @@ def leer(filename):
         cambiarlo a uno que este admita, y solo admite np.uint8 de un solo canal
         """
         resta = np.clip(frame - fondo, 0, 255).astype(np.uint8)#Los restamos
-        resta = cv2.medianBlur(resta, 3)#Le pasamos el filtro de la mediana
+        resta = cv2.medianBlur(resta, 7)#Le pasamos el filtro de la mediana
         resta = (resta > 100).astype(np.uint8) * 255#Binarizamos
         restado.append(resta)
 
@@ -301,26 +301,45 @@ def Resolver_Sistema(cent_x, cent_y,xc1, yc1, zc1, xc2, yc2, zc2, Lx, Ly, w= 800
     
     for i in range(n):
         
+        """
         x1= cent_x[i][0]/w
         z1= cent_x[i][1]/h
         
         y2= cent_y[i][0]/w
         z2= cent_y[i][1]/h
+        """
+
+        y1= cent_x[i][0]/w #Lo de cent_x es porque era la camara paralela al eje x
+        z1= cent_x[i][1]/h
+
+        x2= cent_y[i][0]/w
+        z2= cent_y[i][1]/h
         
         """
-        Resolvemos un sistema tq M*x= N donde M es una matriz 4x3 y N es una matriz 4x1, nuestra solucion es un array 
+        Resolvemos un sistema tq M*x= N donde M es una matriz 4x3 y N es una matriz 4x1, 
+        nuestra solucion es un array 
         de la forma [x,y,z]
 
-        Hemos divido entre el ancho (w) y el alto (h) para tener valores adimensionales entre 0 y 1 
+        Hemos divido entre el ancho (w) y el alto (h) para tener valores adimensionales 
+        entre 0 y 1 
         siendo que Lx y Ly valen 1 precisamente por eso.
         """
         
+        """
         M= np.array([[x1-xc1,yc1-Ly,0],
             [z1-zc1,0,yc1-Ly],
             [xc2-Lx,y2-yc2,0],
             [0,z2-zc2,xc2-Lx]])#Si hay algun problema, a lo mejor es en esta matriz
         
         N= np.array([yc1*x1 - Ly*xc1, yc1*z1 - Ly*zc1, xc2*y2 - Lx*yc2, xc2*z2 - Lx*zc2])
+        """
+
+        M= np.array([[y1-yc1,xc1-Lx,0],
+            [z1-zc1,0,xc1-Lx],
+            [yc2-Ly,x2-xc2,0],
+            [0,z2-zc2,yc2-Ly]])#Si hay algun problema, a lo mejor es en esta matriz
+        
+        N= np.array([xc1*y1 - Lx*yc1, xc1*z1 - Lx*zc1, yc2*x2 - Ly*xc2, yc2*z2 - Ly*zc2])
         
         sol= scp.linalg.lstsq(M,N)[0]#La que importa es la cero, el resto son otras cosas
 
