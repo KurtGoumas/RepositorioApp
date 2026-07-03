@@ -44,6 +44,7 @@ def leer(filename):
         if ret:
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
             muestras.append(frame[200:800, 500:1300])
+            muestras.append(frame)#Para cuando el video este ya recortado
     
     fondo = scp.stats.mode(np.array(muestras), keepdims=True)[0][0].astype(np.float32)#Creamos un fondo quedandonos con la moda de cada uno de los puntos de cada fotograma en el tiempo
 
@@ -69,6 +70,7 @@ def leer(filename):
         if not ret:
             break
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)[200:800, 500:1300].astype(np.float32)
+        #frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY).astype(np.float32)#Para videos ya recortados
         """
         Lo pasamos a escala de grises para quedarnos solo con uno
 
@@ -98,6 +100,7 @@ def leer_antiguo(filename):#Si la necesito para algo la consulto
         
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)#Lo pasamos a escala de grises para quedarnos solo con uno
         video_lista.append(frame[200:800,500:1300])#Lo añadimos a una lista recortando a mano todo lo que no sea pecera, se debe cambiar segun el setup
+        #video_lista.append(frame)#Para cuando el video venga ya recortado
     video_array= np.array(video_lista)#Lo transformamos en un array que nos gusta mas trabajar asi 
     
     """

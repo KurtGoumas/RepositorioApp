@@ -43,6 +43,7 @@ class CamThread(Thread):
                 self.Contador_Frames += 1
                 self.frame = frame
                 self.cam.out.write(frame)
+                #self.cam.out.write(frame[200:800, 500:1300])#Aqui lo que escribimos es el frame recortado para que no ocupe tanto
                 self.frame_actual= time.time()
                 if self.frame_actual-self.frame_anterior== 0:
                     sel.fps_real= 0
@@ -65,9 +66,14 @@ class Home(tk.Frame):
 
         #Todo lo relativo a la camara
 
-        self.indices= listar_indices()
-        self.cam1= Camara(self.indices[0])
-        self.cam2= Camara(self.indices[1])
+        try: 
+            self.indices= listar_indices()
+            self.cam1= Camara(self.indices[0])
+            self.cam2= Camara(self.indices[1])
+
+        except(IndexError, RuntimeError):#Por si no estan las dos camara que pase a procesado
+            self.after(1,self.Cambiar_a_Procesado)
+            return
 
         self.previsualizacion= True #Esto es para la previsualizacion
 
@@ -83,12 +89,16 @@ class Home(tk.Frame):
 
         #Los valores de las horas, minutos y segundos y sus intervalos
 
-        self.t_horas= tk.StringVar(self, value='')
-        self.t_minutos= tk.StringVar(self, value='')
-        self.t_segundos= tk.StringVar(self, value= '')
+        self.t_horas= tk.IntVar(self,value= 0)
+        self.t_minutos= tk.IntVar(self, value= 1)
+        self.t_segundos= tk.IntVar(self, value= 0)
 
-        self.intervalo_minutos= tk.StringVar(self, value= '' )
-        self.intervalo_segundos= tk.StringVar(self, value= '')
+        self.intervalo_minutos= tk.IntVar(self, value= 0 )
+        self.intervalo_segundos= tk.IntVar(self, value= 20)
+
+        #Nombre de extra de los videos
+
+        self.nombre_prefijo= tk.StringVar(self, value= '')
 
         self.text_entry_width = 10
 
@@ -101,19 +111,18 @@ class Home(tk.Frame):
 
     def start(self): #Al pulsar START, guarda los  tiempos e inicia la grabacion
 
+        """
+        Vamos a hacer una previsualizacion expres antes de todo
+        """
+        self.previsualizar()
+
         horas= self.t_horas.get()
         minutos= self.t_minutos.get()
         segundos= self.t_segundos.get()
 
         intervalo_minutos= self.intervalo_minutos.get()
         intervalo_segundos= self.intervalo_segundos.get()
-        if horas!= '' and minutos!= '' and segundos!= '' and intervalo_minutos!= '' and intervalo_segundos!= '':
-            horas= int(horas)
-            minutos= int(minutos)
-            segundos= int(segundos)
-
-            intervalo_minutos= int(intervalo_minutos)
-            intervalo_segundos= int(intervalo_segundos)
+        if horas!= 0 or minutos!= 0 or segundos!= 0:
 
             tiempo= horas*3600 + minutos*60 + segundos
             intervalo= intervalo_minutos*60 + intervalo_segundos
@@ -151,8 +160,8 @@ class Home(tk.Frame):
     def bucle(self, start_time, tiempo, intervalo):#Este es el bucle grande donde se crean hilos y salidas
 
         if time.time()- start_time<tiempo:
-            self.cam1.crear_salida()
-            self.cam2.crear_salida()
+            self.cam1.crear_salida(prefijo= self.nombre_prefijo)
+            self.cam2.crear_salida(prefijo= self.nombre_prefijo)
 
             t1 = CamThread(self.cam1,start_time)
             t2 = CamThread(self.cam2,start_time)
@@ -255,12 +264,6 @@ class Home(tk.Frame):
         self.cam1.preparar_previsualizacion()
         self.cam2.preparar_previsualizacion()
 
-        """
-        La forma en la que hemos definido preparar nos crea una salida que luego se queda muerta.
-        Es por eso que las voy a borrar manualmente.
-        Es un poco sucio pero ya no da la cosa para mas.
-        """
-
         self.cam1.activar()
         self.cam2.activar()
 
@@ -301,7 +304,7 @@ class Home(tk.Frame):
         Voy a crear un Frame para las etiquetas de tiempo y de intervalos de tiempo
         """
 
-        posicion = {'horas':[0,0], 'minutos':[0,2], 'segundos':[0,4], 'intervalo_min':[1, 0], 'intervalo_s':[1,2],'grabar':[1, 6], 'parar': [2,6], 'Exp': [3,0], 'Gain': [6,0], 'Bar1':[3,3], 'Bar2':[4,3], 'Prev':[0,6], 'Procesador':[3,6]}
+        posicion = {'horas':[0,0], 'minutos':[0,2], 'segundos':[0,4], 'intervalo_min':[1, 0], 'intervalo_s':[1,2],'grabar':[1, 6], 'parar': [2,6], 'Exp': [3,0], 'Gain': [6,0], 'Bar1':[3,3], 'Bar2':[4,3], 'Nombre': [5,3], 'Prev':[0,6], 'Procesador':[3,6]}
 
         etiquetasFrame= tk.Frame(self)
         etiquetasFrame.configure(background= style.COMPONENT)
@@ -351,6 +354,15 @@ class Home(tk.Frame):
                           width = self.text_entry_width
 
         ).grid(row= posicion['intervalo_s'][0], column=posicion['intervalo_s'][1]+1)
+
+        #Nombre prefijo entrada
+
+        nombre_prefijo= tk.Entry(etiquetasFrame,
+                          **style.STYLE,
+                          textvariable= self.nombre_prefijo,
+                          width = self.text_entry_width
+
+        ).grid(row= posicion['Nombre'][0], column=posicion['Nombre'][1]+1) 
 
         #Textos y etiquetas no interactuables
 
@@ -402,6 +414,13 @@ class Home(tk.Frame):
                               
         ).grid(row=posicion['intervalo_s'][0],column=posicion['intervalo_s'][1])
 
+        #Para añadir un prefijo al video
+
+        texto__nombre_prefijo= tk.Label(etiquetasFrame,
+                              text='Añade un prefijo al vídeo: ',
+                              **style.STYLE
+                              
+        ).grid(row=posicion['Nombre'][0],column=posicion['Nombre'][1])
 
         #Botones
         boton_inicio= tk.Button(etiquetasFrame, 
