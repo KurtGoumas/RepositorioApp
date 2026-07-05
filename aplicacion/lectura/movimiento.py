@@ -52,8 +52,7 @@ def Obtener_p_t_v_a(Nombre):
     pos[:,1]= y
     pos[:,2]= z
 
-    return pos, t, v, a
-    
+    return pos, t, v, a  
 
 @njit(fastmath= True, parallel= True)
 def velocidades(pos, t):
@@ -169,13 +168,20 @@ def Movimiento(Nombre, pos, t):
     
     #Preparamos los arrays de x,y,z
 
-    pos= pos[0]# Porque el array es de la forma (trayectorias, Fotogramas, posiciones)
+    escala= 25.5 #Distancia en cm de la pecera teniendo en cuenta que 25 es 1
+
+    pos= pos[0]*escala# Porque el array es de la forma (trayectorias, Fotogramas, posiciones)
     
     x= pos[:, 0]
     y= pos[:, 1]
     z= pos[:, 2]
     
+    #Scatter de las posiciones
     ax1.scatter(x,y,z, label= 'Movimiento en todo el espacio de la gamba', s= 8)
+
+    #Trayectoria pintada
+    ax1.plot(x,y,z, linestyle = "dashed", color = "black", linewidth = 0.5)
+
     ax1.legend(loc= 'best')
     fig.savefig(Nombre_3D)#creo que tengo que crear un directorio pero bueno, veremos 
     #fig.show()
@@ -186,7 +192,6 @@ def Movimiento(Nombre, pos, t):
 
     anim= Animacion_Movimiento(pos, t, save= True, saveName= Nombre_animacion)
 
-    '''
     """
     Lo siguiente que vamos a hacer es calcularnos las velocidades y las aceleraciones 
     y las guardaremos en un ultimo csv para disponer ellas si hiciera falta
@@ -211,8 +216,8 @@ def Movimiento(Nombre, pos, t):
 
     ax2.legend(loc= 'best')
 
-    plt.savefig(Nombre_vel)
-    plt.show()
+    fig2.savefig(Nombre_vel)
+    #plt.show()
 
     fig3, ax3= plt.subplots()
 
@@ -228,8 +233,8 @@ def Movimiento(Nombre, pos, t):
 
     ax3.legend(loc= 'best')
 
-    plt.savefig(Nombre_ac)
-    plt.show()
+    fig3.savefig(Nombre_ac)
+    #plt.show()
 
     """
     Ya tenemos todas las figuras hechas y guardadas, ahora solo queda meterlas en el 
@@ -237,7 +242,7 @@ def Movimiento(Nombre, pos, t):
     """
 
     Guardado= Escribir_p_t_v_a(Nombre_cortado, pos, t, v, v_vec, a, a_vec)
-    '''
+
     return True
 
 def Movimiento_csv(Nombre, pos, t, v, a):
@@ -251,7 +256,8 @@ def Movimiento_csv(Nombre, pos, t, v, a):
 
     #Pintamos las posiciones en funcion del timepo para el individuo
     
-    ax1= plt.figure().add_subplot(projection= '3d')
+    fig= plt.figure()
+    ax1= fig.add_subplot(projection= '3d')
 
     ax1.set_title('Reconstrucción de la trayectoria del inviduo en el espacio.')
     ax1.set_xlabel(r'$x [cm]$')
@@ -264,11 +270,22 @@ def Movimiento_csv(Nombre, pos, t, v, a):
     y= pos[:, 1]
     z= pos[:, 2]
     
+    #Scatter de las posiciones
     ax1.scatter(x,y,z, label= 'Movimiento en todo el espacio de la gamba')
+
+    #Trayectoria pintada
+    ax1.plot(x,y,z, linestyle = "dashed", color = "black", linewidth = 0.5)
+    
     ax1.legend(loc= 'best')
     
-    plt.savefig(Nombre_3D)#creo que tengo que crear un directorio pero bueno, veremos 
-    plt.show()
+    fig.savefig(Nombre_3D)#creo que tengo que crear un directorio pero bueno, veremos 
+    #plt.show()
+
+    """
+    La animacion
+    """
+
+    anim= Animacion_Movimiento(pos, t, save= True, saveName= Nombre_animacion)
     
     """
     Lo siguiente que vamos a hacer es calcularnos las velocidades y las aceleraciones 
@@ -292,8 +309,8 @@ def Movimiento_csv(Nombre, pos, t, v, a):
 
     ax2.legend(loc= 'best')
 
-    plt.savefig(Nombre_vel)
-    plt.show()
+    fig2.savefig(Nombre_vel)
+    #plt.show()
 
     fig3, ax3= plt.subplots()
 
@@ -309,7 +326,7 @@ def Movimiento_csv(Nombre, pos, t, v, a):
 
     ax3.legend(loc= 'best')
 
-    plt.savefig(Nombre_ac)
-    plt.show()
+    fig3.savefig(Nombre_ac)
+    #plt.show()
 
     return True

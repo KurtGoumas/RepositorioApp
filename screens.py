@@ -540,7 +540,7 @@ class Procesado(tk.Frame):
 
         self.N_Objetos= tk.IntVar(self, value= '1')
 
-        self.peso_mov= tk.DoubleVar(self, value= '10')
+        self.peso_mov= tk.DoubleVar(self, value= '100')
         self.peso_3d= tk.DoubleVar(self, value= 1)
 
         self.text_entry_width = 10

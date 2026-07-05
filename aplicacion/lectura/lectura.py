@@ -44,7 +44,7 @@ def leer(filename):
         if ret:
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
             muestras.append(frame[200:800, 500:1300])
-            muestras.append(frame)#Para cuando el video este ya recortado
+            #muestras.append(frame)#Para cuando el video este ya recortado
     
     fondo = scp.stats.mode(np.array(muestras), keepdims=True)[0][0].astype(np.float32)#Creamos un fondo quedandonos con la moda de cada uno de los puntos de cada fotograma en el tiempo
 
@@ -363,7 +363,7 @@ def Ordenar_3D(cent_xyz, N_objetos= 1., peso= 10.):#N_objetos es el numero de ob
     Ordenado= np.zeros((N_objetos,Nf,3))
     #Ordenado[:,0:,]= cent_xyz[0]#Rellenamos con posiciones el primer fotograma
     for i in range(N_objetos):#Rellenamos con los N primeros objetos el fotograma inicial
-        Ordenado[:,0,:]= np.array(cent_xyz[0][i])
+        Ordenado[i,0,:]= np.array(cent_xyz[0][i])
     
     for f in range(1, Nf):
         n0= len(cent_xyz[f])#Numero de objetos del fotograma a tratar
@@ -382,8 +382,8 @@ def Ordenar_3D(cent_xyz, N_objetos= 1., peso= 10.):#N_objetos es el numero de ob
                     minNorm= norma
                     candidato= True
                 
-                if not candidato:
-                    Ordenado[i][f]= Ordenado[i][f-1]#Si no encontramos correspondencia porque la gamba se ha escondido, rellenamos con el anterior
+            if not candidato:
+                Ordenado[i][f]= Ordenado[i][f-1]#Si no encontramos correspondencia porque la gamba se ha escondido, rellenamos con el anterior
                     
     return Ordenado
 
@@ -441,7 +441,7 @@ def Interpolar_trayectoria(cent_interpolado, t_interpolado, t_referencia):
     return cent_nuevo, t_referencia #spline(t_referencia), t_referencia
     
     
-def Union_camaras(cent_finales_x, cent_finales_y,t_x, t_y, N_objetos= 10, peso=1, xc1= 0.5, yc1= 1.5, zc1= 0.5 , xc2= 1.5, yc2= 0.5, zc2= 0.5, Lx= 1, Ly= 1):
+def Union_camaras(cent_finales_x, cent_finales_y,t_x, t_y, N_objetos= 10, peso=1, xc1= 0.5, yc1= 1.5, zc1= 0.5 , xc2= 1.5, yc2= 0.5, zc2= 0.5, Lx= 1, Ly= 1, h= 800, w= 1300):
     
     """
     En esta funcion vamos a intentar por fin obtener un array del tipo 
@@ -490,7 +490,7 @@ def Union_camaras(cent_finales_x, cent_finales_y,t_x, t_y, N_objetos= 10, peso=1
                 cent_ord_y.append(np.array([]))
             continue
         
-        cent_x, cent_y= Ordenar_fotograma(cent_finales_x[i], cent_finales_y[i],100)
+        cent_x, cent_y= Ordenar_fotograma(cent_finales_x[i], cent_finales_y[i],peso)
         
         cent_ord_x.append(cent_x)
         cent_ord_y.append(cent_y)
@@ -534,11 +534,12 @@ def Union_camaras(cent_finales_x, cent_finales_y,t_x, t_y, N_objetos= 10, peso=1
     #print('Sistema resuelto, vamos a ordenar los 3D')
 
     #print('Listos ordenar 3D: ',cent_xyz[:5])
-    cent_finales= Ordenar_3D(cent_xyz, N_objetos, peso)
+    jacobiano= (w**2 + w**2 + h**2)**(3/2)#Para pasar del peso en pixeles a peso adimensional
+    peso_3D= peso/jacobiano
+    cent_finales= Ordenar_3D(cent_xyz, N_objetos, peso_3D)
     #print('Ordenados 3D: ',cent_finales[:5])
 
     return cent_finales, t
-
 
 """
 Aqui van las funciones dedicadas a guardar las trayectorias
