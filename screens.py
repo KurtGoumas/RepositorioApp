@@ -160,8 +160,8 @@ class Home(tk.Frame):
     def bucle(self, start_time, tiempo, intervalo):#Este es el bucle grande donde se crean hilos y salidas
 
         if time.time()- start_time<tiempo:
-            self.cam1.crear_salida(prefijo= self.nombre_prefijo)
-            self.cam2.crear_salida(prefijo= self.nombre_prefijo)
+            self.cam1.crear_salida(prefijo= self.nombre_prefijo.get())
+            self.cam2.crear_salida(prefijo= self.nombre_prefijo.get())
 
             t1 = CamThread(self.cam1,start_time)
             t2 = CamThread(self.cam2,start_time)
@@ -543,6 +543,12 @@ class Procesado(tk.Frame):
         self.peso_mov= tk.DoubleVar(self, value= '100')
         self.peso_3d= tk.DoubleVar(self, value= 1)
 
+        self.h_start= tk.IntVar(self, value= 425)
+        self.h_last= tk.IntVar(self, value= 850)
+
+        self.w_start= tk.IntVar(self, value= 550)
+        self.w_last= tk.IntVar(self, value= 1350)
+
         self.text_entry_width = 10
 
         #Para poder introducir todos los widgets
@@ -599,11 +605,13 @@ class Procesado(tk.Frame):
             Nombre= os.path.splitext(archivo)[0]
             Nombres.append(Nombre)
 
-            restado= lectura.leer(archivo)
+            restado= lectura.leer(archivo,self.h_start.get(), 
+                                            self.h_last.get(), self.w_start.get(),
+                                            self.w_last.get())
             centroides_validos= lectura.centroides(restado)
             
             self.procesado.append(centroides_validos)
-            del restado #Liberamos la celda de memoria de rstado para que no pete 
+            del restado #Liberamos la celda de memoria de restado para que no pete 
         self.procesado= np.array(self.procesado, dtype= object)
 
         """
@@ -612,16 +620,16 @@ class Procesado(tk.Frame):
         """
 
         cent_x= self.procesado[0]
-        #print('x :',cent_x[:20])
+        print('x :',cent_x[:20])
         t_x= lectura.Tiempos_csv(Nombres[0])#Necesitamos los tiempos para la interpolacion en Union_camaras
         
         
         cent_y= self.procesado[1]
-        #print('y :',cent_y[:20])
+        print('y :',cent_y[:20])
         t_y= lectura.Tiempos_csv(Nombres[1])
 
         print('Uniendo cámaras')
-        posiciones, tiempos= lectura.Union_camaras(cent_x,cent_y, t_x, t_y, self.N_Objetos.get(),self.peso_mov.get(),self.xc1.get(),self.yc1.get(),self.zc1.get(),self.xc2.get(),self.yc2.get(),self.zc2.get(),self.Lx.get(),self.Ly.get())
+        posiciones, tiempos= lectura.Union_camaras(cent_x,cent_y, t_x, t_y, self.N_Objetos.get(),self.peso_mov.get(),self.xc1.get(),self.yc1.get(),self.zc1.get(),self.xc2.get(),self.yc2.get(),self.zc2.get(),self.Lx.get(),self.Ly.get(), self.h_last.get(), self.w_last.get())
         print('Cámaras Unidas')
         """
         Nos falta solo sacar las imagenes usando posiciones y tiempos
@@ -775,7 +783,7 @@ class Procesado(tk.Frame):
         ).grid(row=posicion['N Objetos'][0],column=posicion['N Objetos'][1])
 
         texto_peso= tk.Label(etiquetasFrame,
-                            text='Peso del Movimiento (0-1): ',
+                            text='Peso del Movimiento (0-100): ',
                             **style.STYLE
                               
         ).grid(row=posicion['Peso Mov'][0],column=posicion['Peso Mov'][1])

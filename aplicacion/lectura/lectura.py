@@ -22,7 +22,7 @@ comodamente.
 Por otro lado podremos tomar toda una carpeta y trabajar con ella.
 '''
 
-def leer(filename):
+def leer(filename, h_start, h_last, w_start, w_last):
 
     cap = cv2.VideoCapture(filename)
 
@@ -43,7 +43,7 @@ def leer(filename):
         ret, frame = cap.read()
         if ret:
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            muestras.append(frame[200:800, 500:1300])
+            muestras.append(frame[h_start:h_last, w_start:w_last])
             #muestras.append(frame)#Para cuando el video este ya recortado
     
     fondo = scp.stats.mode(np.array(muestras), keepdims=True)[0][0].astype(np.float32)#Creamos un fondo quedandonos con la moda de cada uno de los puntos de cada fotograma en el tiempo
@@ -69,7 +69,7 @@ def leer(filename):
         ret, frame = cap.read()
         if not ret:
             break
-        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)[200:800, 500:1300].astype(np.float32)
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)[h_start:h_last, w_start:w_last].astype(np.float32)
         #frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY).astype(np.float32)#Para videos ya recortados
         """
         Lo pasamos a escala de grises para quedarnos solo con uno
@@ -80,8 +80,8 @@ def leer(filename):
         cambiarlo a uno que este admita, y solo admite np.uint8 de un solo canal
         """
         resta = np.clip(frame - fondo, 0, 255).astype(np.uint8)#Los restamos
-        resta = cv2.medianBlur(resta, 7)#Le pasamos el filtro de la mediana
-        resta = (resta > 100).astype(np.uint8) * 255#Binarizamos
+        resta = cv2.medianBlur(resta, 11)#Le pasamos el filtro de la mediana
+        resta = (resta > 10).astype(np.uint8) * 255#Binarizamos
         restado.append(resta)
 
     cap.release()
@@ -256,7 +256,7 @@ def centroides(restado): #Le pasamos un video ya restado y procesado
     return centroides_finales
 
 @njit(fastmath= True)#, parallel= True)
-def Ordenar_fotograma(cent_x, cent_y, peso= 10., offset= 100):#Este offset es para intentar arreglar que las camaras no estan exactamente a la misma altura pese a intentarlo
+def Ordenar_fotograma(cent_x, cent_y, peso= 10., offset= 0):#Este offset es para intentar arreglar que las camaras no estan exactamente a la misma altura pese a intentarlo
     """
     En esta funcion tomamos cada uno de los objetos del mismo fotograma para las dos camaras y los vamos
     comparando por su coordenada z.
@@ -441,7 +441,7 @@ def Interpolar_trayectoria(cent_interpolado, t_interpolado, t_referencia):
     return cent_nuevo, t_referencia #spline(t_referencia), t_referencia
     
     
-def Union_camaras(cent_finales_x, cent_finales_y,t_x, t_y, N_objetos= 10, peso=1, xc1= 0.5, yc1= 1.5, zc1= 0.5 , xc2= 1.5, yc2= 0.5, zc2= 0.5, Lx= 1, Ly= 1, h= 800, w= 1300):
+def Union_camaras(cent_finales_x, cent_finales_y,t_x, t_y, N_objetos= 10, peso=1, xc1= 0.5, yc1= 1.5, zc1= 0.5 , xc2= 1.5, yc2= 0.5, zc2= 0.5, Lx= 1, Ly= 1, h= 1300, w= 800):
     
     """
     En esta funcion vamos a intentar por fin obtener un array del tipo 
@@ -529,13 +529,13 @@ def Union_camaras(cent_finales_x, cent_finales_y,t_x, t_y, N_objetos= 10, peso=1
                 cent_xyz.append([np.zeros(3)])
             continue
         
-        posicion= Resolver_Sistema(cent_ord_x[i], cent_ord_y[i], xc1, yc1, zc1, xc2, yc2, zc2, Lx, Ly)
+        posicion= Resolver_Sistema(cent_ord_x[i], cent_ord_y[i], xc1, yc1, zc1, xc2, yc2, zc2, Lx, Ly, h, w)
         cent_xyz.append(posicion)
     #print('Sistema resuelto, vamos a ordenar los 3D')
 
     #print('Listos ordenar 3D: ',cent_xyz[:5])
     jacobiano= (w**2 + w**2 + h**2)**(3/2)#Para pasar del peso en pixeles a peso adimensional
-    peso_3D= peso/jacobiano
+    peso_3D= peso#(peso**3)/jacobiano
     cent_finales= Ordenar_3D(cent_xyz, N_objetos, peso_3D)
     #print('Ordenados 3D: ',cent_finales[:5])
 

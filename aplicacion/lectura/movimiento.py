@@ -54,7 +54,7 @@ def Obtener_p_t_v_a(Nombre):
 
     return pos, t, v, a  
 
-@njit(fastmath= True, parallel= True)
+@njit(fastmath= True)
 def velocidades(pos, t):
     """
     Esta funcion es simplemente una funcion auxiliar de Movimiento para sacar las velocidades 
@@ -70,7 +70,7 @@ def velocidades(pos, t):
     a= np.zeros(n) #Modulo de la aceleracion
     a_vec= np.zeros((n,3))
 
-    for i in prange(1,n):#Recuerda que la velocidad inicial es 0
+    for i in range(1,n):#Recuerda que la velocidad inicial es 0
 
         #Sacamos velocidades
         dpos= pos[i]-pos[i-1]
@@ -84,12 +84,21 @@ def velocidades(pos, t):
 
         #Sacamos aceleraciones
 
-        dv= v_vec[i]-v_vec[i-1]
+        dv= v_vec[i]- v_vec[i-1]
 
         a_vec_inst= dv/dt
 
         a_mod= (a_vec_inst[0]**2 + a_vec_inst[1]**2 + a_vec_inst[2]**2)**0.5
-
+        """
+        if a_mod>10: 
+            print("i:",i)
+            print('ace,vector', a_vec_inst)
+            print('vel, vector i:', v_vec[i])
+            print('vel, vector i-1:', v_vec[i-1])
+            print("dv:", dv)
+            print('dt:',dt)
+            print("a_mod:", a_mod )
+        """
         a_vec[i]= a_vec_inst
         a[i]= a_mod
 

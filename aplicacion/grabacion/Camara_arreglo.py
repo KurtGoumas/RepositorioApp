@@ -54,7 +54,7 @@ class Camara:
         if not os.path.exists('./videos'):
             os.makedirs('./videos')
         fecha = dt.datetime.now()
-        self.filename = f'videos/' + prefijo + '-' + f'{fecha.day}-{fecha.month}-{fecha.year}-{fecha.hour}-{fecha.minute}-{fecha.second}_{self.indice}'
+        self.filename = f'videos/' + prefijo + f'{fecha.day}-{fecha.month}-{fecha.year}-{fecha.hour}-{fecha.minute}-{fecha.second}_{self.indice}'
         self.fourcc = cv2.VideoWriter_fourcc(*'mp4v')
         if self.cap.get(cv2.CAP_PROP_FPS)> 0:
             self.fps= self.cap.get(cv2.CAP_PROP_FPS)

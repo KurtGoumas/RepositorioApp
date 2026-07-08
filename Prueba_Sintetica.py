@@ -3,6 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib as matplotlib
 from aplicacion.lectura import lectura as lec
+from aplicacion.lectura import movimiento
 #from aplicacion.lectura import movimiento as mov # Ojo, el agg de aqui dentro está liandola 
 #matplotlib.use('qt5agg')#Para que no intente abrir ventanas
 plt.close('all')
@@ -38,8 +39,10 @@ def Helice3D (t,a=7,b=7,wx=1,wy=1):
     z = t
     return x,y,z # en cm 
 #%% Construimos la pecera virtual
-unionCam = False # Pasas por todo union cam si true. En caso contrario, solo pasas por Resolver_sistema
+unionCam = True # Pasas por todo union cam si true. En caso contrario, solo pasas por Resolver_sistema
 # Grid en la pecera virtual
+
+
 """
 # Limites de la pecera (0,1)
 nPoints = 3
@@ -47,10 +50,12 @@ xArr = np.linspace(0,1,nPoints) # En espacio real, luego pasamos a pixeles
 yArr = np.copy(xArr)
 zArr = np.copy(xArr)
 """
+
+
 #%% Construimos las trayectorias en los planos y la 3D teorica
 nTimes = 1000
 tArr = np.linspace(0,10,nTimes) # Nota: Luego probar con dos arrays de tiempo ligeramente desplazados entre si (por la interpolacion)
-h = 800 #px
+h = 1300 #px
 hm = 25.5 #m 
 # Variables de la camara (cm)
 xc1= 47.5
@@ -97,14 +102,15 @@ regla de 3:
 Así:
     y = 800/25.5 * x
 """
-scale = 800./25.5 # Pasamos de cm a pixeles
+scale = 1300./25.5 # Pasamos de cm a pixeles
 Cam1 = scale*Cam1
 Cam2 = scale*Cam2
 
 #%% Pasamos por el algoritmo (desde centroides para abajo)
 if unionCam:
     print("Modo union Cam")
-    TrayecNum, tNum = lec.Union_camaras(Cam1,Cam2,tArr,tArr, N_objetos = 1, peso = 1000, xc1= 1.86, yc1= 0.47, zc1= 0.43 , xc2= 0.47, yc2= 1.86, zc2= 0.43, Lx= 1, Ly= 1)
+    TrayecNum, tNum = lec.Union_camaras(Cam1,Cam2,tArr,tArr, N_objetos = 1, peso = 1000, xc1= 1.86, yc1= 0.47, zc1= 0.43 , xc2= 0.47, yc2= 1.86, zc2= 0.43, Lx= 1, Ly= 1, w= 1300, h= 1300)
+    resultados= movimiento.Movimiento('Sintectico_', TrayecNum, tNum)
 else:
     print("Modo a mano (resolver sistema)")
     TrayecNum = np.zeros((nTimes,1,3), dtype = float)
@@ -129,7 +135,7 @@ else:
     fig.suptitle("Solo resolver sistema")
     ax.scatter(TrayecNum[:,0,0],TrayecNum[:,0,1],TrayecNum[:,0,2], label='numerica', s = 8)
 
-
+'''
 ax.scatter(xTeo/hm,yTeo/hm,zTeo/hm, label = "teorica", s = 8) # Para estar en adimensional. Esta perfe
 
 ax.set_xlabel("x/Lx")
@@ -162,4 +168,4 @@ ax4.scatter(tArr,error_z)
 ax4.set_xlabel("t")
 ax4.set_ylabel("err_Z")
 fig4.show()
-
+'''
