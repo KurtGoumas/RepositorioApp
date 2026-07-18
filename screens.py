@@ -669,7 +669,7 @@ class Procesado(tk.Frame):
 
         for archivo in archivos:
             
-            Nombre= os.path.splitext(archivo) #para luego usarlo en la llamada a la creacion de la grafica
+            Nombre= os.path.splitext(archivo)[0] #para luego usarlo en la llamada a la creacion de la grafica
             """
             Lo primero que queremos es disponer de las posiciones y el tiempo en su forma de array
             para asi ya trabajar con ellos

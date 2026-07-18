@@ -104,7 +104,7 @@ def velocidades(pos, t):
 
     return v_vec, v, a_vec, a
 
-def Animacion_Movimiento(pos,t,skip = 1, save = False, saveName = "Animacion"):
+def Animacion_Movimiento(pos,t,skip = 100, save = False, saveName = "Animacion"):
     
     """
     Dada las posiciones tipo [fotograma[x,y,z], ...], se hace una animacion en el tiempo
@@ -259,9 +259,12 @@ def Movimiento_csv(Nombre, pos, t, v, a):
     if not os.path.exists('./resultados'):
         os.makedirs('./resultados')
 
-    Nombre_3D= 'resultados/' + Nombre + '_plot_trayectoria'
-    Nombre_vel= 'resultados/' + Nombre + '_plot_velocidad'
-    Nombre_ac= 'resultados/' + Nombre + '_plot_aceleracion'
+    Nombre_cortado= os.path.basename(Nombre).split('_')[0]
+
+    Nombre_3D= 'resultados/' + Nombre_cortado + '_plot_trayectoria'
+    Nombre_vel= 'resultados/' + Nombre_cortado + '_plot_velocidad'
+    Nombre_ac= 'resultados/' + Nombre_cortado + '_plot_aceleracion'
+    Nombre_animacion= 'resultados/' + Nombre_cortado + '_Animacion.gif'
 
     #Pintamos las posiciones en funcion del timepo para el individuo
     

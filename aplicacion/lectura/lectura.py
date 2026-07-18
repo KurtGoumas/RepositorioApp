@@ -411,6 +411,10 @@ def Interpolar_trayectoria(cent_interpolado, t_interpolado, t_referencia):
     cent_nuevo[-1]= cent_interpolado[-1].copy()#Porque es posible que al final no tengamos nada a la derecha
 
     for i in range(1,len(t_referencia)-1):
+
+        if t_referencia[i]== t_interpolado[i]:#Para evitar que se rompa la interpolacion
+            cent_nuevo[i]= cent_interpolado[i].copy()
+            continue
         
         a_indx= np.argwhere(t_interpolado<t_referencia[i])[-1][0]#Para coger el mas cercano por la izquierda
         b_indx= np.argwhere(t_interpolado>=t_referencia[i])[0][0]#Para coger el mas cercano por la derecha
