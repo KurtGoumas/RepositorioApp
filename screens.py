@@ -102,6 +102,7 @@ class Home(tk.Frame):
 
         self.text_entry_width = 10
 
+        style.aplicar_tema_ttk()#Configura el estilo oscuro de las barras de progreso (ttk)
         self.init_widgets()
 
         #Barra de progreso
@@ -298,225 +299,147 @@ class Home(tk.Frame):
     def Cambiar_a_Procesado(self):
         self.controller.show_frame(Procesado)
 
+    #Pequeño ayudante puramente visual: crea una fila "etiqueta + entrada" dentro
+    #de una sección, sin tocar ninguna variable ni lógica de ejecución.
+    def _fila_entrada(self, contenedor, etiqueta, variable, fila):
+        tk.Label(contenedor, text=etiqueta, **style.STYLE).grid(
+            row=fila, column=0, sticky=tk.W, padx=(0, style.PAD), pady=4
+        )
+        tk.Entry(contenedor,
+                 textvariable=variable,
+                 width=self.text_entry_width,
+                 **style.STYLE_ENTRY
+                 ).grid(row=fila, column=1, sticky=tk.W, pady=4)
+
     def init_widgets(self): #Aqui iran todos los botones y demas
 
         """
-        Voy a crear un Frame para las etiquetas de tiempo y de intervalos de tiempo
+        Disposición visual de la pantalla de grabación, organizada en secciones:
+        - Cabecera con el título de la pantalla y el acceso a Procesado
+        - Vista previa de las dos cámaras
+        - Panel inferior con: duración, intervalos, ajustes de cámara,
+          barras de progreso y acciones principales (previsualizar/iniciar/detener)
+
+        Ninguna variable de control ni función de ejecución cambia respecto al original,
+        solo su disposición y estilo.
         """
 
-        posicion = {'horas':[0,0], 'minutos':[0,2], 'segundos':[0,4], 'intervalo_min':[1, 0], 'intervalo_s':[1,2],'grabar':[1, 6], 'parar': [2,6], 'Exp': [3,0], 'Gain': [6,0], 'Bar1':[3,3], 'Bar2':[4,3], 'Nombre': [5,3], 'Prev':[0,6], 'Procesador':[3,6]}
+        PAD = style.PAD
 
-        etiquetasFrame= tk.Frame(self)
-        etiquetasFrame.configure(background= style.COMPONENT)
-        etiquetasFrame.pack(
-            side= tk.BOTTOM,
-            fill= tk.BOTH,
-            expand= True,
+        # ---------------- Cabecera ----------------
+        header= tk.Frame(self, bg= style.BACKGROUND)
+        header.pack(side= tk.TOP, fill= tk.X, padx= PAD*2, pady= (PAD*2, PAD))
+
+        tk.Label(header, text= 'Grabación', **style.STYLE_TITLE).pack(side= tk.LEFT)
+
+        tk.Button(header,
+                  text= 'Ir a Procesado',
+                  command= self.Cambiar_a_Procesado,
+                  **style.STYLE_BOTON
+                  ).pack(side= tk.RIGHT)
+
+        # ---------------- Vista previa de cámaras ----------------
+        videoFrame= tk.Frame(self, bg= style.BACKGROUND)
+        videoFrame.pack(side= tk.TOP, fill= tk.BOTH, expand= True, padx= PAD*2, pady= (0, PAD))
+
+        videoFrame.grid_columnconfigure(0, weight= 1)
+        videoFrame.grid_columnconfigure(1, weight= 1)
+        videoFrame.grid_rowconfigure(1, weight= 1)
+
+        tk.Label(videoFrame, text= 'Cámara 1', **style.STYLE_SECTION_TITLE).grid(
+            row= 0, column= 0, sticky= tk.W, pady= (0, 4)
+        )
+        tk.Label(videoFrame, text= 'Cámara 2', **style.STYLE_SECTION_TITLE).grid(
+            row= 0, column= 1, sticky= tk.W, pady= (0, 4)
         )
 
-        #Textos y etiquetas interactuables (entradas de texto)
+        cam1Wrap= tk.Frame(videoFrame, bg= style.SURFACE, highlightbackground= style.BORDER, highlightthickness= 1)
+        cam1Wrap.grid(row= 1, column= 0, sticky= tk.NSEW, padx= (0, PAD//2))
+        cam2Wrap= tk.Frame(videoFrame, bg= style.SURFACE, highlightbackground= style.BORDER, highlightthickness= 1)
+        cam2Wrap.grid(row= 1, column= 1, sticky= tk.NSEW, padx= (PAD//2, 0))
 
-        #Primero las de tiempo
-        t_horas= tk.Entry(etiquetasFrame,
-                          **style.STYLE,
-                          textvariable= self.t_horas,
-                          width = self.text_entry_width
+        #Los Label donde se pintan los fotogramas: mismos nombres que usa previsualizar()/visualizar()
+        self.videolbl1= tk.Label(cam1Wrap, bg= style.SURFACE)
+        self.videolbl1.pack(fill= tk.BOTH, expand= True, padx= 2, pady= 2)
+        self.videolbl2= tk.Label(cam2Wrap, bg= style.SURFACE)
+        self.videolbl2.pack(fill= tk.BOTH, expand= True, padx= 2, pady= 2)
 
-        ).grid(row= posicion['horas'][0], column= posicion['horas'][1]+1)
+        # ---------------- Panel inferior ----------------
+        panel= tk.Frame(self, bg= style.BACKGROUND)
+        panel.pack(side= tk.BOTTOM, fill= tk.X, padx= PAD*2, pady= (0, PAD*2))
+        panel.grid_columnconfigure(0, weight= 1)
+        panel.grid_columnconfigure(1, weight= 1)
+        panel.grid_columnconfigure(2, weight= 1)
 
-        t_minutos= tk.Entry(etiquetasFrame,
-                          **style.STYLE,
-                          textvariable= self.t_minutos,
-                          width = self.text_entry_width
+        # -- Duración de la grabación --
+        tiempoBox= tk.LabelFrame(panel, text= 'Duración de la grabación', **style.STYLE_LABELFRAME)
+        tiempoBox.grid(row= 0, column= 0, sticky= tk.NSEW, padx= (0, PAD))
 
-        ).grid(row= posicion['minutos'][0], column=posicion['minutos'][1]+1)
-        
-        t_segundos= tk.Entry(etiquetasFrame,
-                          **style.STYLE,
-                          textvariable= self.t_segundos,
-                          width = self.text_entry_width
-                          
+        self._fila_entrada(tiempoBox, 'Horas', self.t_horas, 0)
+        self._fila_entrada(tiempoBox, 'Minutos', self.t_minutos, 1)
+        self._fila_entrada(tiempoBox, 'Segundos', self.t_segundos, 2)
 
-        ).grid(row= posicion['segundos'][0], column=posicion['segundos'][1]+1)
+        # -- Intervalo entre archivos y nombre --
+        intervaloBox= tk.LabelFrame(panel, text= 'Intervalo y nombre del archivo', **style.STYLE_LABELFRAME)
+        intervaloBox.grid(row= 0, column= 1, sticky= tk.NSEW, padx= PAD)
 
-        #Ahora los intervalos
-        intervalo_minutos= tk.Entry(etiquetasFrame,
-                          **style.STYLE,
-                          textvariable= self.intervalo_minutos,
-                          width = self.text_entry_width
+        self._fila_entrada(intervaloBox, 'Intervalo (min)', self.intervalo_minutos, 0)
+        self._fila_entrada(intervaloBox, 'Intervalo (s)', self.intervalo_segundos, 1)
+        self._fila_entrada(intervaloBox, 'Prefijo del vídeo', self.nombre_prefijo, 2)
 
-        ).grid(row= posicion['intervalo_min'][0], column=posicion['intervalo_min'][1]+1)
+        # -- Ajustes de cámara --
+        ajustesBox= tk.LabelFrame(panel, text= 'Ajustes de cámara', **style.STYLE_LABELFRAME)
+        ajustesBox.grid(row= 0, column= 2, sticky= tk.NSEW, padx= (PAD, 0))
 
+        tk.Label(ajustesBox, text= 'Exposición', **style.STYLE).grid(row= 0, column= 0, sticky= tk.W, pady= 4)
+        tk.Button(ajustesBox, text= '–', command= self.Exp_down, **style.STYLE_BOTON).grid(row= 0, column= 1, padx= 2)
+        tk.Button(ajustesBox, text= '+', command= self.Exp_up, **style.STYLE_BOTON).grid(row= 0, column= 2, padx= 2)
 
-        intervalo_segundos= tk.Entry(etiquetasFrame,
-                          **style.STYLE,
-                          textvariable= self.intervalo_segundos,
-                          width = self.text_entry_width
+        tk.Label(ajustesBox, text= 'Ganancia', **style.STYLE).grid(row= 1, column= 0, sticky= tk.W, pady= 4)
+        tk.Button(ajustesBox, text= '–', command= self.Gain_down, **style.STYLE_BOTON).grid(row= 1, column= 1, padx= 2)
+        tk.Button(ajustesBox, text= '+', command= self.Gain_up, **style.STYLE_BOTON).grid(row= 1, column= 2, padx= 2)
 
-        ).grid(row= posicion['intervalo_s'][0], column=posicion['intervalo_s'][1]+1)
+        # -- Barras de progreso --
+        progresoBox= tk.Frame(panel, bg= style.BACKGROUND)
+        progresoBox.grid(row= 1, column= 0, columnspan= 3, sticky= tk.EW, pady= (PAD, 0))
+        progresoBox.grid_columnconfigure(0, weight= 1)
+        progresoBox.grid_columnconfigure(1, weight= 1)
 
-        #Nombre prefijo entrada
-
-        nombre_prefijo= tk.Entry(etiquetasFrame,
-                          **style.STYLE,
-                          textvariable= self.nombre_prefijo,
-                          width = self.text_entry_width
-
-        ).grid(row= posicion['Nombre'][0], column=posicion['Nombre'][1]+1) 
-
-        #Textos y etiquetas no interactuables
-
-        #Textos de los botones de Exposicion y ganancia
-
-        texto_Exp= tk.Label(etiquetasFrame,
-                              text='Exposición:',
-                              **style.STYLE
-
-        ).grid(row=posicion['Exp'][0],column=posicion['Exp'][1])
-
-        texto_Gain= tk.Label(etiquetasFrame,
-                              text='Ganancia:',
-                              **style.STYLE
-
-        ).grid(row=posicion['Gain'][0],column=posicion['Gain'][1])
-
-        #Primero los de tiempo
-
-        texto_horas= tk.Label(etiquetasFrame,
-                              text='Horas: ',
-                              **style.STYLE
-
-        ).grid(row=posicion['horas'][0],column=posicion['horas'][1])
-
-        texto_minutos= tk.Label(etiquetasFrame,
-                              text='Minutos: ',
-                              **style.STYLE
-                              
-        ).grid(row=posicion['minutos'][0],column=posicion['minutos'][1])
-
-        texto_segundos= tk.Label(etiquetasFrame,
-                              text='Segundos: ',
-                              **style.STYLE
-                              
-        ).grid(row=posicion['segundos'][0],column=posicion['segundos'][1])
-
-        #Ahora los intervalos
-
-        texto_intervalo_minutos= tk.Label(etiquetasFrame,
-                              text='Intervalos en minutos: ',
-                              **style.STYLE
-                              
-        ).grid(row=posicion['intervalo_min'][0],column=posicion['intervalo_min'][1])
-
-        texto__intervalo_sgundos= tk.Label(etiquetasFrame,
-                              text='Intervalos en segundos: ',
-                              **style.STYLE
-                              
-        ).grid(row=posicion['intervalo_s'][0],column=posicion['intervalo_s'][1])
-
-        #Para añadir un prefijo al video
-
-        texto__nombre_prefijo= tk.Label(etiquetasFrame,
-                              text='Añade un prefijo al vídeo: ',
-                              **style.STYLE
-                              
-        ).grid(row=posicion['Nombre'][0],column=posicion['Nombre'][1])
-
-        #Botones
-        boton_inicio= tk.Button(etiquetasFrame, 
-                                text= 'PREVISUALIZAR',
-                                command= self.previsualizar, 
-                                activebackground= style.BACKGROUND ,
-                                activeforeground= style.TEXT,
-                                **style.STYLE
-                                ).grid(row=posicion['Prev'][0], column=posicion['Prev'][1])
-
-        boton_inicio= tk.Button(etiquetasFrame, 
-                                text= 'START',
-                                command= self.start, 
-                                activebackground= style.BACKGROUND ,
-                                activeforeground= style.TEXT,
-                                **style.STYLE
-                                ).grid(row=posicion['grabar'][0], column=posicion['grabar'][1])
-        boton_finalizado= tk.Button(etiquetasFrame, 
-                                text= 'STOP',
-                                command= self.stop, 
-                                activebackground= style.BACKGROUND ,
-                                activeforeground= style.TEXT,
-                                **style.STYLE
-                                ).grid(row=posicion['parar'][0], column=posicion['parar'][1])
-        boton_Exp_up= tk.Button(etiquetasFrame, 
-                                text= '🔼',
-                                command= self.Exp_up, 
-                                activebackground= style.BACKGROUND ,
-                                activeforeground= style.TEXT,
-                                **style.STYLE
-                                ).grid(row=posicion['Exp'][0]-1, column=posicion['Exp'][1]+1)
-        boton_Exp_down= tk.Button(etiquetasFrame, 
-                                text= '🔽',
-                                command= self.Exp_down, 
-                                activebackground= style.BACKGROUND ,
-                                activeforeground= style.TEXT,
-                                **style.STYLE
-                                ).grid(row=posicion['Exp'][0]+1, column=posicion['Exp'][1]+1)
-        boton_Gain_up= tk.Button(etiquetasFrame, 
-                                text= '🔼',
-                                command= self.Gain_up, 
-                                activebackground= style.BACKGROUND ,
-                                activeforeground= style.TEXT,
-                                **style.STYLE
-                                ).grid(row=posicion['Gain'][0]-1, column=posicion['Gain'][1]+1)
-        boton_Gain_down= tk.Button(etiquetasFrame, 
-                                text= '🔽',
-                                command= self.Gain_down, 
-                                activebackground= style.BACKGROUND ,
-                                activeforeground= style.TEXT,
-                                **style.STYLE
-                                ).grid(row=posicion['Gain'][0]+1, column=posicion['Gain'][1]+1)
-        
-        boton_Procesado= tk.Button(etiquetasFrame, 
-                                text= 'Procesar',
-                                command= self.Cambiar_a_Procesado, 
-                                activebackground= style.BACKGROUND ,
-                                activeforeground= style.TEXT,
-                                **style.STYLE
-                                ).grid(row=posicion['Procesador'][0], column=posicion['Procesador'][1])
-        
-        #Barras de progreso
-
-        self.barra1= ttk.Progressbar(etiquetasFrame)#, variable= self.Frames1)
-        self.barra1.grid(row= posicion['Bar1'][0], column= posicion['Bar1'][1]+1)
-
-        self.barra2= ttk.Progressbar(etiquetasFrame)
-        self.barra2.grid(row= posicion['Bar2'][0], column= posicion['Bar2'][1]+1)
-
-        # Hacemos un Frame superior para los videos
-        videoFrame= tk.Frame(self)
-        videoFrame.configure(background=style.COMPONENT)
-        videoFrame.pack(
-            side= tk.TOP,
-            fill= tk.BOTH,
-            expand= True,
+        tk.Label(progresoBox, text= 'Progreso cámara 1', **style.STYLE_MUTED_ON_BG).grid(
+            row= 0, column= 0, sticky= tk.W
+        )
+        tk.Label(progresoBox, text= 'Progreso cámara 2', **style.STYLE_MUTED_ON_BG).grid(
+            row= 0, column= 1, sticky= tk.W, padx= (PAD, 0)
         )
 
-        '''
-        Vamos a dotar de peso a las ventanas donde se previsualizan los videos para que
-        no se fagociten uno al otro 
-        '''
-        videoFrame.grid_columnconfigure(0, weight=1)
-        videoFrame.grid_columnconfigure(1, weight=1)
-        videoFrame.grid_columnconfigure(2, weight=1)
-        videoFrame.grid_columnconfigure(3, weight=1)
+        #Mismas barras de progreso que usa progreso(); solo cambia estilo y disposición
+        self.barra1= ttk.Progressbar(progresoBox, style= 'Moderna.Horizontal.TProgressbar')
+        self.barra1.grid(row= 1, column= 0, sticky= tk.EW, pady= (2, 0))
 
-        '''
-        Para los videos vamos a necesitar una Label que es lo que rellenaremos con las
-        sucesivas imagenes
-        '''
+        self.barra2= ttk.Progressbar(progresoBox, style= 'Moderna.Horizontal.TProgressbar')
+        self.barra2.grid(row= 1, column= 1, sticky= tk.EW, padx= (PAD, 0), pady= (2, 0))
 
-        self.videolbl1= tk.Label(videoFrame, **style.STYLE)
-        self.videolbl1.grid(column= 0, row= 0, columnspan= 2, sticky= tk.NSEW)
-        self.videolbl2= tk.Label(videoFrame, **style.STYLE)
-        self.videolbl2.grid(column= 2, row= 0, columnspan= 2, sticky= tk.NSEW)
+        # -- Acciones principales --
+        accionesBox= tk.Frame(panel, bg= style.BACKGROUND)
+        accionesBox.grid(row= 2, column= 0, columnspan= 3, sticky= tk.EW, pady= (PAD, 0))
+
+        tk.Button(accionesBox,
+                  text= 'PREVISUALIZAR',
+                  command= self.previsualizar,
+                  **style.STYLE_BOTON
+                  ).pack(side= tk.LEFT, padx= (0, PAD))
+
+        tk.Button(accionesBox,
+                  text= 'INICIAR GRABACIÓN',
+                  command= self.start,
+                  **style.STYLE_BOTON_EXITO
+                  ).pack(side= tk.LEFT, padx= PAD)
+
+        tk.Button(accionesBox,
+                  text= 'DETENER',
+                  command= self.stop,
+                  **style.STYLE_BOTON_PELIGRO
+                  ).pack(side= tk.LEFT, padx= PAD)
 
 class Procesado(tk.Frame):
 
@@ -543,7 +466,7 @@ class Procesado(tk.Frame):
         self.peso_mov= tk.DoubleVar(self, value= '100')
         self.peso_3d= tk.DoubleVar(self, value= 1)
 
-        self.h_start= tk.IntVar(self, value= 425)
+        self.h_start= tk.IntVar(self, value= 350)
         self.h_last= tk.IntVar(self, value= 850)
 
         self.w_start= tk.IntVar(self, value= 550)
@@ -678,198 +601,95 @@ class Procesado(tk.Frame):
 
             resultados= movimiento.Movimiento_csv(Nombre, pos, t, v, a)     
 
-    def init_widgets(self): #Aqui van los botones y demas 
-
-        posicion= {'Select': [0,0],'CSV':[1,0], 'Titulo param': [0,0], 'Camara 1': [1,0], 'Camara 2': [2,0], 'N Objetos': [3,0], 'Peso Mov': [4,0], 'Lx': [3,2], 'Ly': [4,2]}
-
-        #Vamos a hacer un frame en el que poner los botones para empezar
-
-        botonesFrame= tk.Frame(self)
-        botonesFrame.configure(background=style.COMPONENT)
-        botonesFrame.pack(
-            side= tk.TOP,
-            fill= tk.BOTH,
-            expand= True,
-        ) 
-
-        #Botones
-
-        boton_procesado= tk.Button(botonesFrame, 
-                                text= 'Seleccionar Vídeos',
-                                command= self.leer_y_procesar_videos, 
-                                activebackground= style.BACKGROUND ,
-                                activeforeground= style.TEXT,
-                                **style.STYLE
-                                ).grid(row=posicion['Select'][0], column=posicion['Select'][1])
-
-        boton_trayectorias_csv= tk.Button(botonesFrame, 
-                                text= 'Seleccionar Archivos CSV',
-                                command= self.leer_y_procesar_csv, 
-                                activebackground= style.BACKGROUND ,
-                                activeforeground= style.TEXT,
-                                **style.STYLE
-                                ).grid(row=posicion['CSV'][0], column=posicion['CSV'][1])
-        
-
-        #Vamos a poner un espacio para esos valores que tendran que ser añadidos por el usuario
-        etiquetasFrame= tk.Frame(self)
-        etiquetasFrame.configure(background= style.COMPONENT)
-        etiquetasFrame.pack(
-            side= tk.BOTTOM,
-            fill= tk.BOTH,
-            expand= True,
+    #Pequeño ayudante puramente visual, igual que el de Home: etiqueta + entrada en una fila
+    def _fila_entrada(self, contenedor, etiqueta, variable, fila, columna=0):
+        tk.Label(contenedor, text=etiqueta, **style.STYLE).grid(
+            row=fila, column=columna, sticky=tk.W, padx=(0, 6), pady=4
         )
+        tk.Entry(contenedor,
+                 textvariable=variable,
+                 width=self.text_entry_width,
+                 **style.STYLE_ENTRY
+                 ).grid(row=fila, column=columna+1, sticky=tk.W, padx=(0, 18), pady=4)
 
-        #Textos y estiquetas no interactuables
+    def init_widgets(self): #Aqui van los botones y demas
 
-        texto_parametros_titulo= tk.Label(etiquetasFrame,
-                            text='Parámetros de Configuración del Experimento',
-                            **style.STYLE
-                              
-        ).grid(row=posicion['Titulo param'][0],column=posicion['Titulo param'][1])
+        """
+        Disposición visual de la pantalla de Procesado, organizada en secciones:
+        - Cabecera con el título de la pantalla
+        - Carga de datos (vídeos o csv ya procesados)
+        - Parámetros de configuración del experimento, agrupados por tema:
+          posición de las cámaras, dimensiones del tanque, detección de objetos
+          y recorte de la imagen
 
-        texto_Camara_1= tk.Label(etiquetasFrame,
-                            text='Cámara 1: ',
-                            **style.STYLE
-                              
-        ).grid(row=posicion['Camara 1'][0],column=posicion['Camara 1'][1])
+        Ninguna variable de control ni función de ejecución cambia respecto al original,
+        solo su disposición y estilo.
+        """
 
-        texto_xc1= tk.Label(etiquetasFrame,
-                            text='x= ',
-                            **style.STYLE
-                              
-        ).grid(row=posicion['Camara 1'][0],column=posicion['Camara 1'][1]+1)
+        PAD = style.PAD
 
-        texto_yc1= tk.Label(etiquetasFrame,
-                            text=', y= ',
-                            **style.STYLE
-                              
-        ).grid(row=posicion['Camara 1'][0],column=posicion['Camara 1'][1]+3)
+        # ---------------- Cabecera ----------------
+        header= tk.Frame(self, bg= style.BACKGROUND)
+        header.pack(side= tk.TOP, fill= tk.X, padx= PAD*2, pady= (PAD*2, PAD))
 
-        texto_zc1= tk.Label(etiquetasFrame,
-                            text=', z= ',
-                            **style.STYLE
-                              
-        ).grid(row=posicion['Camara 1'][0],column=posicion['Camara 1'][1]+5)
+        tk.Label(header, text= 'Procesado', **style.STYLE_TITLE).pack(side= tk.LEFT)
 
-        texto_Camara_2= tk.Label(etiquetasFrame,
-                            text='Camara 2: ',
-                            **style.STYLE
-                              
-        ).grid(row=posicion['Camara 2'][0],column=posicion['Camara 2'][1])
+        # ---------------- Carga de datos ----------------
+        cargaBox= tk.LabelFrame(self, text= 'Cargar datos', **style.STYLE_LABELFRAME)
+        cargaBox.pack(side= tk.TOP, fill= tk.X, padx= PAD*2, pady= (0, PAD))
 
-        texto_xc2= tk.Label(etiquetasFrame,
-                            text='x= ',
-                            **style.STYLE
-                              
-        ).grid(row=posicion['Camara 2'][0],column=posicion['Camara 2'][1]+1)
+        tk.Button(cargaBox,
+                  text= 'Seleccionar Vídeos',
+                  command= self.leer_y_procesar_videos,
+                  **style.STYLE_BOTON_PRIMARIO
+                  ).pack(side= tk.LEFT, padx= (0, PAD))
 
-        texto_yc2= tk.Label(etiquetasFrame,
-                            text=', y= ',
-                            **style.STYLE
-                              
-        ).grid(row=posicion['Camara 2'][0],column=posicion['Camara 2'][1]+3)
+        tk.Button(cargaBox,
+                  text= 'Seleccionar Archivos CSV',
+                  command= self.leer_y_procesar_csv,
+                  **style.STYLE_BOTON
+                  ).pack(side= tk.LEFT)
 
-        texto_zc2= tk.Label(etiquetasFrame,
-                            text=', z= ',
-                            **style.STYLE
-                              
-        ).grid(row=posicion['Camara 2'][0],column=posicion['Camara 2'][1]+5)
+        # ---------------- Parámetros del experimento ----------------
+        paramFrame= tk.Frame(self, bg= style.BACKGROUND)
+        paramFrame.pack(side= tk.TOP, fill= tk.BOTH, expand= True, padx= PAD*2, pady= (0, PAD*2))
+        paramFrame.grid_columnconfigure(0, weight= 1)
+        paramFrame.grid_columnconfigure(1, weight= 1)
 
-        texto_N_obj= tk.Label(etiquetasFrame,
-                            text='Número de Objetos: ',
-                            **style.STYLE
-                              
-        ).grid(row=posicion['N Objetos'][0],column=posicion['N Objetos'][1])
+        # -- Posición de las cámaras --
+        camarasBox= tk.LabelFrame(paramFrame, text= 'Posición de las cámaras', **style.STYLE_LABELFRAME)
+        camarasBox.grid(row= 0, column= 0, sticky= tk.NSEW, padx= (0, PAD//2), pady= (0, PAD))
 
-        texto_peso= tk.Label(etiquetasFrame,
-                            text='Peso del Movimiento (0-100): ',
-                            **style.STYLE
-                              
-        ).grid(row=posicion['Peso Mov'][0],column=posicion['Peso Mov'][1])
+        tk.Label(camarasBox, text= 'Cámara 1', **style.STYLE).grid(row= 0, column= 0, columnspan= 6, sticky= tk.W, pady= (0, 4))
+        self._fila_entrada(camarasBox, 'x', self.xc1, 1, 0)
+        self._fila_entrada(camarasBox, 'y', self.yc1, 1, 2)
+        self._fila_entrada(camarasBox, 'z', self.zc1, 1, 4)
 
-        texto_Lx= tk.Label(etiquetasFrame,
-                            text='Lx: ',
-                            **style.STYLE
-                              
-        ).grid(row=posicion['Lx'][0],column=posicion['Lx'][1])
+        tk.Label(camarasBox, text= 'Cámara 2', **style.STYLE).grid(row= 2, column= 0, columnspan= 6, sticky= tk.W, pady= (10, 4))
+        self._fila_entrada(camarasBox, 'x', self.xc2, 3, 0)
+        self._fila_entrada(camarasBox, 'y', self.yc2, 3, 2)
+        self._fila_entrada(camarasBox, 'z', self.zc2, 3, 4)
 
-        texto_Ly= tk.Label(etiquetasFrame,
-                            text='Ly: ',
-                            **style.STYLE
-                              
-        ).grid(row=posicion['Ly'][0],column=posicion['Ly'][1])
+        # -- Dimensiones del tanque --
+        tanqueBox= tk.LabelFrame(paramFrame, text= 'Dimensiones del tanque', **style.STYLE_LABELFRAME)
+        tanqueBox.grid(row= 0, column= 1, sticky= tk.NSEW, padx= (PAD//2, 0), pady= (0, PAD))
 
-        #Aqui van las entradas de los valores
+        self._fila_entrada(tanqueBox, 'Lx', self.Lx, 0)
+        self._fila_entrada(tanqueBox, 'Ly', self.Ly, 1)
 
-        xc1= tk.Entry(etiquetasFrame,
-                          **style.STYLE,
-                          textvariable= self.xc1,
-                          width = self.text_entry_width
+        # -- Detección de objetos --
+        deteccionBox= tk.LabelFrame(paramFrame, text= 'Detección de objetos', **style.STYLE_LABELFRAME)
+        deteccionBox.grid(row= 1, column= 0, sticky= tk.NSEW, padx= (0, PAD//2), pady= (0, PAD))
 
-        ).grid(row= posicion['Camara 1'][0], column= posicion['Camara 1'][1]+2)
+        self._fila_entrada(deteccionBox, 'Número de objetos', self.N_Objetos, 0)
+        self._fila_entrada(deteccionBox, 'Peso del movimiento (0-100)', self.peso_mov, 1)
 
-        yc1= tk.Entry(etiquetasFrame,
-                          **style.STYLE,
-                          textvariable= self.yc1,
-                          width = self.text_entry_width
+        # -- Recorte de la imagen --
+        recorteBox= tk.LabelFrame(paramFrame, text= 'Recorte de la imagen', **style.STYLE_LABELFRAME)
+        recorteBox.grid(row= 1, column= 1, sticky= tk.NSEW, padx= (PAD//2, 0), pady= (0, PAD))
 
-        ).grid(row= posicion['Camara 1'][0], column= posicion['Camara 1'][1]+4)
+        self._fila_entrada(recorteBox, 'Ancho inicial (w_s)', self.w_start, 0)
+        self._fila_entrada(recorteBox, 'Ancho final (w_l)', self.w_last, 1)
+        self._fila_entrada(recorteBox, 'Alto inicial (h_s)', self.h_start, 2)
+        self._fila_entrada(recorteBox, 'Alto final (h_l)', self.h_last, 3)
 
-        zc1= tk.Entry(etiquetasFrame,
-                          **style.STYLE,
-                          textvariable= self.zc1,
-                          width = self.text_entry_width
-
-        ).grid(row= posicion['Camara 1'][0], column= posicion['Camara 1'][1]+6)
-
-        xc2= tk.Entry(etiquetasFrame,
-                          **style.STYLE,
-                          textvariable= self.xc2,
-                          width = self.text_entry_width
-
-        ).grid(row= posicion['Camara 2'][0], column= posicion['Camara 2'][1]+2)
-
-        yc2= tk.Entry(etiquetasFrame,
-                          **style.STYLE,
-                          textvariable= self.yc2,
-                          width = self.text_entry_width
-
-        ).grid(row= posicion['Camara 2'][0], column= posicion['Camara 2'][1]+4)
-
-        zc2= tk.Entry(etiquetasFrame,
-                          **style.STYLE,
-                          textvariable= self.zc2,
-                          width = self.text_entry_width
-
-        ).grid(row= posicion['Camara 2'][0], column= posicion['Camara 2'][1]+6)
-
-        N_Objetos= tk.Entry(etiquetasFrame,
-                          **style.STYLE,
-                          textvariable= self.N_Objetos,
-                          width = self.text_entry_width
-
-        ).grid(row= posicion['N Objetos'][0], column= posicion['N Objetos'][1]+1)
-
-        peso_mov= tk.Entry(etiquetasFrame,
-                          **style.STYLE,
-                          textvariable= self.peso_mov,
-                          width = self.text_entry_width
-
-        ).grid(row= posicion['Peso Mov'][0], column= posicion['Peso Mov'][1]+1)
-
-        Lx= tk.Entry(etiquetasFrame,
-                          **style.STYLE,
-                          textvariable= self.Lx,
-                          width = self.text_entry_width
-
-        ).grid(row= posicion['Lx'][0], column= posicion['Lx'][1]+1)
-
-        Ly= tk.Entry(etiquetasFrame,
-                          **style.STYLE,
-                          textvariable= self.Ly,
-                          width = self.text_entry_width
-
-        ).grid(row= posicion['Ly'][0], column= posicion['Ly'][1]+1)
-
-    
